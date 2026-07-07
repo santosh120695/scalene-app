@@ -1,0 +1,19 @@
+# Backend
+backend/.env
+backend/uploads/
+backend/kc-server
+/tmp/kc-*
+
+# Frontend
+web/node_modules/
+web/dist/
+web/.env
+
+# Editor / OS
+.DS_Store
+*.log
+logs/
+pg_backup.sh
+docker-compose.yml
+nginx.conf
+.claude

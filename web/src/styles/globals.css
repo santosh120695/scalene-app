@@ -1,0 +1,548 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────────────
+   shadcn/ui variables + PRD "Warm Scholar" palette (PRD §6.5.3)
+   ───────────────────────────────────────────────────────────────────── */
+:root {
+    /* Slows every animate.css animation (used via animate__animated classes,
+     e.g. animate__faster) from its 1s default. */
+    --animate-duration: 1.6s;
+    --background: #fafafa;
+    /*--background: #f4f2ee;*/
+    --foreground: #18181b;
+    --card: #ffffff;
+    --card-foreground: #18181b;
+    --popover: #ffffff;
+    --popover-foreground: #18181b;
+    --primary: #059669;
+    --primary-foreground: #ffffff;
+    --secondary: #f4f4f5;
+    --secondary-foreground: #18181b;
+    --muted: #f4f4f5;
+    --muted-foreground: #18181b;
+    --accent: #d1fae5;
+    --accent-foreground: #047857;
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+    --border: rgba(0, 0, 0, 0.07);
+    --input: transparent;
+    --input-background: #f4f4f5;
+
+    /* semantic aliases */
+    --text-muted: #a1a1aa;
+    --brand-hover: #047857;
+    --border-default: rgba(0, 0, 0, 0.11);
+    --border-strong: rgba(0, 0, 0, 0.22);
+
+    /* Item type accents */
+    --item-pdf: #c25b3f;
+    --item-link: #3b82f6;
+    --item-note: #d97706;
+    --item-image: #7c3aed;
+    --item-youtube: #dc2626;
+    --item-excalidraw: #db2777;
+
+    /* Layout */
+    --sidebar-width: 240px;
+    --detail-panel-width: 400px;
+    --navbar-height: 48px;
+    --toolbar-height: 44px;
+    --grid-max-width: 1440px;
+
+    /* Item heights */
+    --item-height-pdf: 280px;
+    --item-height-link: 240px;
+    --item-height-note: 200px;
+    --item-height-image: 280px;
+}
+
+/* ─── Dark minimal — neutral greys, monochrome accent ─── */
+.dark {
+    --background: #09090b;
+    --foreground: #fafafa;
+    --card: #18181b;
+    --card-foreground: #fafafa;
+    --popover: #18181b;
+    --popover-foreground: #fafafa;
+    --primary: #34d399;
+    --primary-foreground: #052e1f;
+    --secondary: #27272a;
+    --secondary-foreground: #fafafa;
+    --muted: #27272a;
+    --muted-foreground: #a1a1aa;
+    --accent: #0f3b2e;
+    --accent-foreground: #6ee7b7;
+    --destructive: #ef4444;
+    --destructive-foreground: #fafafa;
+    --border: rgba(255, 255, 255, 0.1);
+    --input: transparent;
+    --input-background: #27272a;
+
+    --text-muted: #71717a;
+    --brand-hover: #6ee7b7;
+    --border-default: rgba(255, 255, 255, 0.15);
+    --border-strong: rgba(255, 255, 255, 0.28);
+}
+
+* {
+    border-color: var(--border);
+}
+
+html,
+body,
+#root {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: "DM Sans", system-ui, sans-serif;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Accessibility: visible focus rings everywhere (PRD §6.5.10) */
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Uppercase label helper */
+.label-caps {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* TipTap editor content */
+.tiptap {
+    outline: none;
+    line-height: 1.7;
+}
+.tiptap p {
+    margin: 0 0 0.5em;
+    font-weight: 400;
+}
+.tiptap h1,
+.tiptap h2,
+.tiptap h3 {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 0.6em 0 0.3em;
+}
+.tiptap h1 {
+    font-size: 40px;
+}
+.tiptap h2 {
+    font-size: 30px;
+}
+.tiptap h3 {
+    font-size: 20px;
+}
+
+/* Typography for the full-page note editor (scoped to .note-doc) */
+.note-doc .tiptap {
+    font-size: 16px;
+    line-height: 1.7;
+}
+.note-doc .tiptap h1 {
+    font-size: 40px;
+}
+.note-doc .tiptap h2 {
+    font-size: 30px;
+}
+.note-doc .tiptap h3 {
+    font-size: 20px;
+}
+.tiptap ul,
+.tiptap ol {
+    padding-left: 1.25em;
+    margin: 0 0 0.5em;
+}
+.tiptap ul {
+    list-style: disc;
+}
+.tiptap ol {
+    list-style: decimal;
+}
+.tiptap ul[data-type="taskList"] {
+    list-style: none;
+    padding-left: 0;
+}
+.tiptap ul[data-type="taskList"] li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5em;
+}
+.tiptap ul[data-type="taskList"] li > label {
+    display: flex;
+    align-items: center;
+    /* Match the paragraph's line-height (em-relative, so it tracks the same
+     ratio in both the compact and full-size editor) instead of guessing a
+     fixed offset — centers the checkbox on the first line of text exactly. */
+    min-height: 1.7em;
+    user-select: none;
+}
+.tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
+    cursor: pointer;
+}
+.tiptap ul[data-type="taskList"] li > div {
+    flex: 1;
+}
+.tiptap ul[data-type="taskList"] li > div > p {
+    margin: 0;
+}
+.tiptap ul[data-type="taskList"] li[data-checked="true"] > div {
+    color: var(--text-muted);
+    text-decoration: line-through;
+}
+.tiptap code {
+    font-family: "Fira Code", monospace;
+    font-size: 0.875em;
+    background: var(--muted);
+    padding: 0.1em 0.3em;
+    border-radius: 4px;
+}
+.tiptap pre {
+    font-family: "Fira Code", monospace;
+    background: #1a1a18;
+    color: #f7f6f3;
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 0 0 0.5em;
+}
+.tiptap pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+}
+.tiptap blockquote {
+    border-left: 3px solid var(--primary);
+    padding-left: 14px;
+    margin: 0 0 0.5em;
+    color: var(--muted-foreground);
+    font-style: italic;
+}
+.tiptap hr {
+    border: none;
+    border-top: 1px solid var(--border-default);
+    margin: 1em 0;
+}
+.tiptap table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+    margin: 0.75em 0;
+    overflow: hidden;
+}
+.tiptap td,
+.tiptap th {
+    position: relative;
+    border: 1px solid var(--border-default);
+    padding: 6px 10px;
+    vertical-align: top;
+    text-align: left;
+}
+.tiptap th {
+    background: var(--muted);
+    font-weight: 600;
+}
+.tiptap td > *,
+.tiptap th > * {
+    margin-bottom: 0;
+}
+.tiptap .selectedCell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    opacity: 0.5;
+    pointer-events: none;
+}
+.tiptap .column-resize-handle {
+    position: absolute;
+    right: -2px;
+    top: 0;
+    bottom: -2px;
+    width: 4px;
+    background: var(--primary);
+    pointer-events: none;
+}
+.tiptap.resize-cursor {
+    cursor: col-resize;
+}
+.tiptap p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: var(--text-muted);
+    pointer-events: none;
+    height: 0;
+}
+
+/* Rendered note HTML (read-only previews) reuse the same typography */
+.prose-note {
+    line-height: 1.7;
+}
+.prose-note h1 {
+    font-size: 20px;
+    font-weight: 600;
+}
+.prose-note h2 {
+    font-size: 17px;
+    font-weight: 600;
+}
+.prose-note ul {
+    list-style: disc;
+    padding-left: 1.25em;
+}
+.prose-note ol {
+    list-style: decimal;
+    padding-left: 1.25em;
+}
+.prose-note code {
+    font-family: "Fira Code", monospace;
+    background: var(--muted);
+    padding: 0.1em 0.3em;
+    border-radius: 4px;
+}
+.prose-note blockquote {
+    border-left: 3px solid var(--primary);
+    padding-left: 14px;
+    color: var(--muted-foreground);
+    font-style: italic;
+}
+.prose-note hr {
+    border: none;
+    border-top: 1px solid var(--border-default);
+    margin: 1em 0;
+}
+.prose-note pre {
+    font-family: "Fira Code", monospace;
+    background: #1a1a18;
+    color: #f7f6f3;
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+}
+.prose-note table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+    margin: 0.75em 0;
+}
+.prose-note td,
+.prose-note th {
+    border: 1px solid var(--border-default);
+    padding: 6px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+.prose-note th {
+    background: var(--muted);
+    font-weight: 600;
+}
+
+/* Compact rendered note HTML for grid-card previews */
+.note-preview {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--muted-foreground);
+    padding: 0.5rem;
+}
+.note-preview p {
+    margin: 0 0 0.3em;
+    padding-bottom: 0.5em;
+}
+.note-preview h1 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 0.2em;
+    padding-bottom: 0.5em;
+}
+.note-preview h2 {
+    font-size: 13px;
+    font-weight: 500;
+    margin: 0 0 0.2em;
+    padding-bottom: 0.5em;
+}
+.note-preview h3 {
+    font-size: 12px;
+    font-weight: 500;
+    padding-bottom: 0.5em;
+}
+.note-preview ul {
+    list-style: disc;
+    padding-left: 1.1em;
+}
+.note-preview ol {
+    list-style: decimal;
+    padding-left: 1.1em;
+}
+.note-preview code {
+    font-family: "Fira Code", monospace;
+    background: var(--muted);
+    padding: 0.1em 0.3em;
+    border-radius: 4px;
+}
+.note-preview table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+    margin: 0 0 0.3em;
+}
+.note-preview td,
+.note-preview th {
+    border: 1px solid var(--border-default);
+    padding: 3px 6px;
+    text-align: left;
+}
+.note-preview th {
+    background: var(--muted);
+    font-weight: 600;
+}
+
+/* Slash-command popup: strip tippy's default dark theme — the menu card
+   inside provides its own surface, border, and shadow. */
+.tippy-box[data-theme~="kc-slash"] {
+    background: transparent;
+    color: inherit;
+    box-shadow: none;
+}
+.tippy-box[data-theme~="kc-slash"] .tippy-content {
+    padding: 0;
+}
+.tippy-box[data-theme~="kc-slash"] .tippy-arrow {
+    display: none;
+}
+
+/* Reader view — Pocket-style article rendering for link items */
+.reader {
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--foreground);
+}
+.reader p {
+    margin: 0 0 1em;
+}
+.reader h1,
+.reader h2,
+.reader h3,
+.reader h4 {
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 1.3em 0 0.5em;
+    color: var(--foreground);
+}
+.reader h1 {
+    font-size: 1.6em;
+}
+.reader h2 {
+    font-size: 1.35em;
+}
+.reader h3 {
+    font-size: 1.15em;
+}
+.reader a {
+    color: var(--primary);
+    text-decoration: underline;
+}
+.reader img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 1em 0;
+}
+.reader ul,
+.reader ol {
+    padding-left: 1.4em;
+    margin: 0 0 1em;
+}
+.reader ul {
+    list-style: disc;
+}
+.reader ol {
+    list-style: decimal;
+}
+.reader li {
+    margin: 0.25em 0;
+}
+.reader blockquote {
+    border-left: 3px solid var(--border-default);
+    padding-left: 1em;
+    margin: 0 0 1em;
+    color: var(--muted-foreground);
+    font-style: italic;
+}
+.reader pre {
+    font-family: "Fira Code", monospace;
+    background: var(--muted);
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 0 0 1em;
+    font-size: 0.85em;
+}
+.reader code {
+    font-family: "Fira Code", monospace;
+    background: var(--muted);
+    padding: 0.1em 0.3em;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+.reader pre code {
+    background: transparent;
+    padding: 0;
+}
+.reader figure {
+    margin: 1em 0;
+}
+.reader figcaption {
+    font-size: 0.85em;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 0.4em;
+}
+.reader table {
+    border-collapse: collapse;
+    margin: 1em 0;
+    font-size: 0.9em;
+    width: 100%;
+}
+.reader td,
+.reader th {
+    border: 1px solid var(--border-default);
+    padding: 6px 10px;
+    text-align: left;
+}
+.reader hr {
+    border: none;
+    border-top: 1px solid var(--border-default);
+    margin: 1.5em 0;
+}
+
+/* Thin warm scrollbars */
+.scroll-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+    background: rgba(26, 26, 24, 0.16);
+    border-radius: 9999px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.001ms !important;
+        transition-duration: 0.001ms !important;
+    }
+}
