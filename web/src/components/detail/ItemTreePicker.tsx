@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -173,6 +173,14 @@ export function ItemTreePicker({ boards, onSelectItem }: Props) {
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focus the search box without the browser scrolling it into view: the split
+  // pane mounts mid slide-in transform, so a scrolling focus would drag the
+  // whole pane sideways and leave the tree tucked under the left pane.
+  useEffect(() => {
+    inputRef.current?.focus({ preventScroll: true });
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query), 250);
@@ -197,7 +205,7 @@ export function ItemTreePicker({ boards, onSelectItem }: Props) {
   return (
     <>
       <Input
-        autoFocus
+        ref={inputRef}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search all items…"

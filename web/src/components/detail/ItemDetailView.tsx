@@ -14,7 +14,6 @@ import { boardKeys, useBoardsList } from "@/hooks/useBoards";
 import { todoKeys } from "@/hooks/useTodos";
 import { RichTextEditor } from "@/components/editor/RichTextEditor";
 import { SubNotes } from "@/components/detail/SubNotes";
-import { PdfViewer } from "@/components/detail/PdfViewer";
 import { Button } from "@/components/ui/button";
 import { cn, sanitizeHtml } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +26,14 @@ import type { AnyItem, ExcalidrawItem, NoteItem } from "@/types";
 const ExcalidrawEditor = lazy(() =>
   import("@/components/editor/ExcalidrawEditor").then((m) => ({
     default: m.ExcalidrawEditor,
+  })),
+);
+
+// EmbedPDF pulls in a large PDFium/WASM bundle — load it only when a PDF is
+// actually opened so it stays out of the initial app bundle.
+const PdfViewer = lazy(() =>
+  import("@/components/detail/PdfViewer").then((m) => ({
+    default: m.PdfViewer,
   })),
 );
 
@@ -106,13 +113,16 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-[var(--border)] bg-card px-3 sm:gap-3 sm:px-4">
+      <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center py-3 gap-2 border-b border-[var(--border)] bg-card px-3 sm:gap-3 sm:px-4">
         <nav className="flex min-w-0 items-center gap-1 text-[13px]">
           {ancestors.map((crumb) => (
-            <span key={crumb.id} className="hidden shrink-0 items-center gap-1 sm:flex">
+            <span
+              key={crumb.id}
+              className="hidden shrink-0 items-center gap-1 sm:flex"
+            >
               <button
                 onClick={() => navigate(`/b/${crumb.id}`)}
-                className="max-w-[100px] truncate text-ink-secondary transition-colors hover:text-brand sm:max-w-[160px]"
+                className="max-w-[100px] truncate text-ink-secondary transition-colors hover:text-brand sm:max-w-[140px]"
               >
                 {crumb.title}
               </button>
@@ -123,8 +133,21 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
               />
             </span>
           ))}
-          <span className="max-w-[140px] truncate font-medium text-ink-primary sm:max-w-[220px]">
+          {/* Current board — links back to the board grid. */}
+          <button
+            onClick={backToBoard}
+            className="max-w-[80px] shrink-0 truncate text-ink-secondary transition-colors hover:text-brand sm:max-w-[160px]"
+          >
             {currentBoard?.title ?? "Board"}
+          </button>
+          <ChevronRight
+            size={13}
+            strokeWidth={1.5}
+            className="shrink-0 text-ink-muted opacity-60"
+          />
+          {/* Current item — final crumb, present on every detail page. */}
+          <span className="min-w-0 truncate font-medium text-ink-primary">
+            {item ? itemLabel(item) : "…"}
           </span>
         </nav>
         {item?.itemType === "note" && (
@@ -190,13 +213,13 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
           )}
         </div>
       </header>
-      <div className="animate__animated animate__faster animate__zoomIn overflow-y-auto">
+      <div className="animate__animated animate__faster animate__zoomIn flex min-h-0 flex-1 flex-col">
         {isLoading || !item ? (
           <div className="flex-1 px-10 py-8">
             <LoadingBody />
           </div>
         ) : item.itemType === "note" ? (
-          <div className="scroll-thin flex-1 overflow-y-auto">
+          <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
             <div className="note-doc mx-auto w-full max-w-[1000px] px-1 sm:px-12 py-8">
               <NoteEditor
                 key={item.id}
@@ -217,18 +240,19 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
         ) : (
           // Split view: content (3) on the left, sub-notes (1) on the right.
           <div className="flex min-h-0 flex-1">
-            <div className="scroll-thin flex-[3] overflow-y-auto">
-              <div
-                className={cn(
-                  "mx-auto w-full py-8",
-                  item.itemType === "pdf"
-                    ? "max-w-[1200px] px-1 sm:px-6"
-                    : "max-w-[760px] px-4 sm:px-12",
-                )}
-              >
+            {item.itemType === "pdf" ? (
+              // The PDF viewer manages its own scrolling and chrome, so let it
+              // fill the whole pane rather than sitting in a padded column.
+              <div className="flex min-h-0 flex-[3] flex-col overflow-hidden">
                 <MediaDetail item={item} />
               </div>
-            </div>
+            ) : (
+              <div className="scroll-thin flex-[3] overflow-y-auto">
+                <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-12">
+                  <MediaDetail item={item} />
+                </div>
+              </div>
+            )}
             {subNotesOpen && (
               <aside className="scroll-thin flex-1 min-w-[260px] overflow-y-auto border-l border-[var(--border)] bg-surface-primary p-5">
                 <SubNotes itemId={item.id} />
@@ -404,14 +428,34 @@ function MediaDetail({ item }: { item: AnyItem }) {
 
   if (item.itemType !== "pdf") return null;
   return (
-    <div className="flex flex-col gap-4">
-      <PdfViewer url={item.filePath} />
-      <p className="text-[12px] text-ink-muted">
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <div className="min-h-0 flex-1">
+        <Suspense fallback={<div className="h-full bg-surface-sunken" />}>
+          <PdfViewer url={item.filePath} />
+        </Suspense>
+      </div>
+      <p className="shrink-0 px-4 text-[12px] text-ink-muted">
         {item.pageCount ? `${item.pageCount} pages · ` : ""}
         {(item.fileSize / 1024 / 1024).toFixed(1)} MB
       </p>
     </div>
   );
+}
+
+// Short label for the item's breadcrumb crumb, per item type.
+function itemLabel(item: AnyItem): string {
+  switch (item.itemType) {
+    case "note":
+      return item.title?.trim() || "Untitled note";
+    case "link":
+      return item.title?.trim() || item.domain || "Link";
+    case "image":
+      return item.caption?.trim() || "Image";
+    case "pdf":
+      return item.title?.trim() || "PDF";
+    case "excalidraw":
+      return item.title?.trim() || "Drawing";
+  }
 }
 
 function LoadingBody() {

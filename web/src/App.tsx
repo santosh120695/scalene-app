@@ -1,11 +1,5 @@
 import { useEffect } from "react";
-import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
-  useLocation,
-} from "react-router-dom";
+import { BrowserRouter, Routes } from "react-router-dom";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,10 +9,11 @@ import { queryPersister } from "@/lib/queryPersistence";
 import { useDrainUploadOutbox } from "@/hooks/useDrainUploadOutbox";
 import { useAuth } from "@/stores/auth";
 import { useTheme } from "@/stores/theme";
-import { LoginPage } from "@/pages/LoginPage";
-import { RegisterPage } from "@/pages/RegisterPage";
-import { AppPage } from "@/pages/AppPage";
-import { TodosPage } from "@/pages/TodosPage";
+// import { LoginPage } from "@/pages/LoginPage";
+// import { RegisterPage } from "@/pages/RegisterPage";
+// import { AppPage } from "@/pages/AppPage";
+// import { TodosPage } from "@/pages/TodosPage";
+import MountRoutes from "./routes";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,33 +23,6 @@ const queryClient = new QueryClient({
     mutations: { networkMode: "online" },
   },
 });
-
-function RequireAuth({ children }: { children: React.ReactNode }) {
-  const user = useAuth((s) => s.user);
-  const initialized = useAuth((s) => s.initialized);
-  const location = useLocation();
-
-  if (!initialized) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-page">
-        <span className="font-display text-[20px] italic text-ink-muted">
-          Scalene
-        </span>
-      </div>
-    );
-  }
-  if (!user) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
-  }
-  return <>{children}</>;
-}
-
-function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
-  const user = useAuth((s) => s.user);
-  const initialized = useAuth((s) => s.initialized);
-  if (initialized && user) return <Navigate to="/" replace />;
-  return <>{children}</>;
-}
 
 // Needs the query client from PersistQueryClientProvider, so it's mounted
 // inside that tree rather than called directly in App().
@@ -86,7 +54,8 @@ export default function App() {
         <OutboxDrainer />
         <BrowserRouter>
           <Routes>
-            <Route
+            {MountRoutes()}
+            {/*<Route
               path="/login"
               element={
                 <RedirectIfAuthed>
@@ -134,7 +103,7 @@ export default function App() {
                 </RequireAuth>
               }
             />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />*/}
           </Routes>
         </BrowserRouter>
         <Toaster />

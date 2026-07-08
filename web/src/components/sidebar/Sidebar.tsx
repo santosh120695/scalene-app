@@ -81,8 +81,8 @@ function ExpandedSidebar({
 
   return (
     <aside className="flex h-full w-[90vw] shrink-0 flex-col overflow-hidden border-r border-[var(--border)] bg-secondary lg:w-[270px]">
-      {/* Header: logo + collapse button */}
-      <div className="flex items-center justify-between border-b border-[var(--border)] p-3">
+      {/* Header: logo + collapse button — h-12 to match the content header. */}
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--border)] px-3">
         <div className="flex items-center gap-2">
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-brand text-[13px] font-semibold text-primary-foreground">
             S
@@ -112,7 +112,7 @@ function ExpandedSidebar({
 
       {/* Boards nav header: label + sort + new-board — New Board lives here now */}
       <div className="mt-5 flex items-center justify-between px-3 pt-3 pb-1">
-        <span className="label-caps font-bold">Boards</span>
+        <span className="font-semibold text-ink-muted">Boards</span>
         <div className="flex items-center gap-1">
           <select
             value={sort}
@@ -208,7 +208,7 @@ function BoardRow({
             "group flex items-center gap-2.5 px-4 py-2 text-[14px] transition-colors hover:bg-surface-sunken",
             active
               ? "border-l-2 border-brand bg-brand-light pl-[14px] font-semibold text-brand"
-              : "font-medium text-ink-secondary",
+              : "font-bold text-ink-secondary",
           )}
         >
           <button
@@ -216,7 +216,9 @@ function BoardRow({
             className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
           >
             <Folder size={15} strokeWidth={1.5} className="shrink-0" />
-            <span className="flex-1 truncate font-normal">{board.title}</span>
+            <span className="flex-1 truncate font-medium first-letter:uppercase">
+              {board.title}
+            </span>
           </button>
           <button
             onClick={(e) => {
