@@ -9,10 +9,6 @@ import { queryPersister } from "@/lib/queryPersistence";
 import { useDrainUploadOutbox } from "@/hooks/useDrainUploadOutbox";
 import { useAuth } from "@/stores/auth";
 import { useTheme } from "@/stores/theme";
-// import { LoginPage } from "@/pages/LoginPage";
-// import { RegisterPage } from "@/pages/RegisterPage";
-// import { AppPage } from "@/pages/AppPage";
-// import { TodosPage } from "@/pages/TodosPage";
 import MountRoutes from "./routes";
 
 const queryClient = new QueryClient({
@@ -55,55 +51,6 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             {MountRoutes()}
-            {/*<Route
-              path="/login"
-              element={
-                <RedirectIfAuthed>
-                  <LoginPage />
-                </RedirectIfAuthed>
-              }
-            />
-            <Route
-              path="/register"
-              element={
-                <RedirectIfAuthed>
-                  <RegisterPage />
-                </RedirectIfAuthed>
-              }
-            />
-            <Route
-              path="/"
-              element={
-                <RequireAuth>
-                  <AppPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/b/:boardId"
-              element={
-                <RequireAuth>
-                  <AppPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/b/:boardId/item/:itemId"
-              element={
-                <RequireAuth>
-                  <AppPage />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/todos"
-              element={
-                <RequireAuth>
-                  <TodosPage />
-                </RequireAuth>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />*/}
           </Routes>
         </BrowserRouter>
         <Toaster />

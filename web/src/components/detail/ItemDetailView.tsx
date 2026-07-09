@@ -21,8 +21,8 @@ import { toast } from "@/components/ui/sonner";
 import { errMessage } from "@/api/client";
 import type { AnyItem, ExcalidrawItem, NoteItem } from "@/types";
 
-// @excalidraw/excalidraw pulls in mermaid/cytoscape and is multiple MB —
-// load it only when a drawing is actually opened, not on every page load.
+// The drawing editor is only needed when a drawing is opened, so keep it out
+// of the initial bundle with a lazy import.
 const ExcalidrawEditor = lazy(() =>
   import("@/components/editor/ExcalidrawEditor").then((m) => ({
     default: m.ExcalidrawEditor,
