@@ -80,7 +80,7 @@ function ExpandedSidebar({
   );
 
   return (
-    <aside className="flex h-full w-[90vw] shrink-0 flex-col overflow-hidden border-r border-[var(--border)] bg-secondary lg:w-[270px]">
+    <aside className="flex h-full w-[90vw] shrink-0 flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--sidebar)] lg:w-[270px]">
       {/* Header: logo + collapse button — h-12 to match the content header. */}
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--border)] px-3">
         <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ function ExpandedSidebar({
       </div>
 
       {/* Scrollable board list (top-level only) */}
-      <nav className="scroll-thin flex-1 overflow-y-auto pb-3">
+      <nav className="scroll-thin flex-1 overflow-y-auto pb-3 mt-1">
         {roots.map((board) => (
           <BoardRow
             key={board.id}

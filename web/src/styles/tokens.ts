@@ -1,8 +1,8 @@
 // Design tokens (PRD §6.5.11) — single source for non-CSS consumers.
 export const tokens = {
   font: {
-    display: "'Poppins', system-ui, sans-serif",
-    body: "'DM Sans', system-ui, sans-serif",
+    display: "'Inter', system-ui, sans-serif",
+    body: "'Inter', system-ui, sans-serif",
     mono: "'Fira Code', monospace",
   },
   color: {

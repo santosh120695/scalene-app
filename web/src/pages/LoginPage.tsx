@@ -92,7 +92,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
               <Sparkles size={20} strokeWidth={1.75} />
             </div>
             <span className="font-display text-[20px] font-semibold tracking-tight">
-              KnowledgeCanvas
+              Scalene
             </span>
           </div>
           <h2 className="mt-6 max-w-md font-display text-[30px] italic leading-[1.15] sm:text-[36px] lg:mt-12 lg:text-[40px]">

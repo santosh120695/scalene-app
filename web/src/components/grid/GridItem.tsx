@@ -1,20 +1,14 @@
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useSortable } from "@dnd-kit/react/sortable";
 import {
-  FileText,
   FolderInput,
   GripVertical,
-  Image as ImageIcon,
-  Link2,
   MessageSquare,
   MoreHorizontal,
   Pencil,
-  PenTool,
   Pin,
-  StickyNote,
   Trash2,
 } from "lucide-react";
-import type { AnyItem, ItemType } from "@/types";
+import type { AnyItem } from "@/types";
 import { cn } from "@/lib/utils";
 import { ItemBody } from "@/components/items/ItemBodies";
 import {
@@ -30,14 +24,6 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-
-const ICONS: Record<ItemType, typeof FileText> = {
-  pdf: FileText,
-  link: Link2,
-  note: StickyNote,
-  image: ImageIcon,
-  excalidraw: PenTool,
-};
 
 function itemTitle(item: AnyItem): string {
   switch (item.itemType) {
@@ -56,6 +42,7 @@ function itemTitle(item: AnyItem): string {
 
 interface Props {
   item: AnyItem;
+  index: number;
   isNew?: boolean;
   onOpen: () => void;
   onDelete: () => void;
@@ -67,6 +54,7 @@ interface Props {
 
 export function GridItem({
   item,
+  index,
   isNew,
   onOpen,
   onDelete,
@@ -74,27 +62,16 @@ export function GridItem({
   onEdit,
   onMoveToBoard,
 }: Props) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+  const { ref, handleRef, isDragging } = useSortable({
     id: item.id,
+    index,
     // Slower reorder settle than dnd-kit's 250ms default.
     transition: { duration: 400, easing: "cubic-bezier(0.25, 1, 0.5, 1)" },
   });
 
-  const Icon = ICONS[item.itemType];
-
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
     width: "100%",
-    maxWidth: 300,
-    height: 400,
+    aspectRatio: "3 / 4",
     opacity: isDragging ? 0.9 : 1,
   };
 
@@ -102,36 +79,25 @@ export function GridItem({
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
-          ref={setNodeRef}
+          ref={ref}
           style={style}
           data-type={item.itemType}
           className={cn(
-            "group relative flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-surface-primary transition-colors hover:border-[var(--border-strong)]",
+            "group relative shadow-sm flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-surface-primary transition-colors hover:border-[var(--border-strong)] animate__animated animate__pulse",
             isDragging && "z-10 cursor-grabbing shadow-panel",
             isNew && "animate-item-pop",
           )}
         >
-          {/* Clickable body */}
-          <button
-            onClick={onOpen}
-            className="flex flex-1 flex-col overflow-hidden text-left"
-            aria-label={`Open ${itemTitle(item)}`}
-          >
-            <ItemBody item={item} />
-          </button>
-
-          {/* Footer */}
-          <div className="flex items-center gap-2 border-t border-[var(--border)] px-3 py-1.5">
+          {/* Header */}
+          <div className="flex items-center gap-2 border-b border-[var(--border)] px-3 py-1.5">
             <button
-              {...attributes}
-              {...listeners}
+              ref={handleRef}
               aria-label="Drag to reorder"
               className="cursor-grab text-ink-muted opacity-0 transition-opacity group-hover:opacity-100"
             >
               <GripVertical size={14} strokeWidth={1.5} />
             </button>
-            <Icon size={16} strokeWidth={1.5} className="shrink-0 text-ink-secondary" />
-            <span className="flex-1 truncate text-[13px] font-medium text-ink-primary">
+            <span className="item-title flex-1 truncate text-[13px] font-medium text-ink-primary">
               {itemTitle(item)}
             </span>
             {item.isPinned && (
@@ -172,6 +138,15 @@ export function GridItem({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          {/* Clickable body */}
+          <button
+            onClick={onOpen}
+            className="flex flex-1 flex-col overflow-hidden text-left"
+            aria-label={`Open ${itemTitle(item)}`}
+          >
+            <ItemBody item={item} />
+          </button>
         </div>
       </ContextMenuTrigger>
 

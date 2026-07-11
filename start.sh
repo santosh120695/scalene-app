@@ -56,7 +56,7 @@ if port_in_use "$FRONTEND_PORT"; then
   echo "==> Port $FRONTEND_PORT already in use — assuming frontend is already running, skipping."
 else
   echo "==> Starting frontend on :$FRONTEND_PORT..."
-  (cd "$ROOT/web" && npm run dev -- --port "$FRONTEND_PORT") >"$LOG_DIR/frontend.log" 2>&1 &
+  (cd "$ROOT/web" && yarn dev -- --port "$FRONTEND_PORT") >"$LOG_DIR/frontend.log" 2>&1 &
   pids+=($!)
 fi
 

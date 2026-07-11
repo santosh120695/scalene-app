@@ -9,34 +9,33 @@
   /* Slows every animate.css animation (used via animate__animated classes,
      e.g. animate__faster) from its 1s default. */
   --animate-duration: 1.6s;
-  --background: #fafafa;
-  /*--background: #f4f2ee;*/
-  --foreground: #18181b;
-  /* --foreground: #5f5e59; */
+  /* Notion "Warm Scholar" light palette — Notion neutrals + emerald brand. */
+  --background: #f7f6f3; /* Notion warm off-white canvas */
+  --foreground: #37352f; /* Notion default text */
   --card: #ffffff;
-  --card-foreground: #18181b;
+  --card-foreground: #37352f;
   --popover: #ffffff;
-  --popover-foreground: #18181b;
-  --primary: #059669;
+  --popover-foreground: #37352f;
+  --primary: #1e3a5f; /* navy brand */
   --primary-foreground: #ffffff;
-  /* --secondary: #f4f4f5; */
-  --secondary: #f9f8f7;
-  --secondary-foreground: #5f5e59;
-  --muted: #f4f4f5;
-  --muted-foreground: #5f5e59;
-  --accent: #d1fae5;
-  --accent-foreground: #047857;
-  --destructive: #dc2626;
+  --secondary: #efeeec; /* Notion raised gray */
+  --secondary-foreground: #37352f;
+  --muted: #f1f1ef; /* Notion sunken gray */
+  --muted-foreground: #787774; /* Notion muted text */
+  --accent: #dbeafe; /* blue tint */
+  --accent-foreground: #1e3a5f;
+  --destructive: #d44c47; /* Notion red */
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.07);
+  --border: rgba(55, 53, 47, 0.09); /* Notion warm border */
   --input: transparent;
-  --input-background: #f4f4f5;
+  --input-background: #f1f1ef;
+  --sidebar: #f7f7f5; /* Notion light sidebar */
 
   /* semantic aliases */
-  --text-muted: #a1a1aa;
-  --brand-hover: #047857;
-  --border-default: rgba(0, 0, 0, 0.11);
-  --border-strong: rgba(0, 0, 0, 0.22);
+  --text-muted: #9b9a97; /* Notion light gray text */
+  --brand-hover: #c2410c; /* burnt-orange hover */
+  --border-default: rgba(55, 53, 47, 0.16);
+  --border-strong: rgba(55, 53, 47, 0.28);
 
   /* Item type accents */
   --item-pdf: #c25b3f;
@@ -60,31 +59,32 @@
   --item-height-image: 280px;
 }
 
-/* ─── Dark minimal — neutral greys, monochrome accent ─── */
+/* ─── Notion dark — warm-neutral charcoals, emerald accent (kept) ─── */
 .dark {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --card: #18181b;
-  --card-foreground: #fafafa;
-  --popover: #18181b;
-  --popover-foreground: #fafafa;
-  --primary: #34d399;
-  --primary-foreground: #052e1f;
-  --secondary: #27272a;
-  --secondary-foreground: #fafafa;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
-  --accent: #0f3b2e;
-  --accent-foreground: #6ee7b7;
-  --destructive: #ef4444;
-  --destructive-foreground: #fafafa;
-  --border: rgba(255, 255, 255, 0.1);
+  --background: #191919; /* Notion dark canvas */
+  --foreground: #e9e9e7; /* Notion dark text (~white 0.81) */
+  --card: #202020; /* Notion dark panel */
+  --card-foreground: #e9e9e7;
+  --popover: #252525;
+  --popover-foreground: #e9e9e7;
+  --primary: #1e3a5f; /* navy brand */
+  --primary-foreground: #ffffff;
+  --secondary: #2f2f2f;
+  --secondary-foreground: #e9e9e7;
+  --muted: #2a2a2a;
+  --muted-foreground: #9b9a97;
+  --accent: #172033; /* navy tint (dark) */
+  --accent-foreground: #93c5fd;
+  --destructive: #ff7369; /* Notion dark red */
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.094);
   --input: transparent;
-  --input-background: #27272a;
+  --input-background: #2a2a2a;
+  --sidebar: #202020; /* Notion dark sidebar */
 
-  --text-muted: #71717a;
-  --brand-hover: #6ee7b7;
-  --border-default: rgba(255, 255, 255, 0.15);
+  --text-muted: #6f6f6f;
+  --brand-hover: #c2410c; /* burnt-orange hover */
+  --border-default: rgba(255, 255, 255, 0.14);
   --border-strong: rgba(255, 255, 255, 0.28);
 }
 
@@ -102,7 +102,7 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: "DM Sans", system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
 }
@@ -121,6 +121,9 @@ body {
   color: var(--text-muted);
 }
 
+/* Pulse an item's title on hover, reusing animate.css's `pulse` keyframe.
+   animate.css only fires on mount, so we trigger it from :hover here. */
+
 /* TipTap editor content */
 .tiptap {
   outline: none;
@@ -133,7 +136,7 @@ body {
 .tiptap h1,
 .tiptap h2,
 .tiptap h3 {
-  font-family: "DM Sans", sans-serif;
+  font-family: "Inter", sans-serif;
   font-weight: 600;
   line-height: 1.25;
   margin: 0.6em 0 0.3em;

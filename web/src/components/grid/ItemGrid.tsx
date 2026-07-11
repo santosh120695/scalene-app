@@ -1,17 +1,6 @@
 import { useState } from "react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  arrayMove,
-  rectSortingStrategy,
-} from "@dnd-kit/sortable";
+import { DragDropProvider, type DragEndEvent } from "@dnd-kit/react";
+import { move } from "@dnd-kit/helpers";
 import type { AnyItem, Board } from "@/types";
 import { GridItem } from "./GridItem";
 import { BoardCard } from "./BoardCard";
@@ -58,30 +47,14 @@ export function ItemGrid({
   onAddNote,
 }: Props) {
   const [order, setOrder] = useState<AnyItem[] | null>(null);
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
-  );
 
   // Use local order during drag for snappy feedback, fall back to props.
   const rendered = order ?? items;
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) {
-      setOrder(null);
-      return;
-    }
-    const oldIndex = rendered.findIndex((i) => i.id === active.id);
-    const newIndex = rendered.findIndex((i) => i.id === over.id);
-    const next = arrayMove(rendered, oldIndex, newIndex);
-    setOrder(next);
-    onReorder(next.map((i) => i.id));
-  }
-
   if (loading) {
     return (
       <div className="grid-area">
-        <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-7 px-6 py-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-7 px-6 py-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {Array.from({ length: 8 }).map((_, i) => (
             <Skeleton key={i} className="h-[240px] w-full" />
           ))}
@@ -104,10 +77,26 @@ export function ItemGrid({
   const pinned = rendered.filter((i) => i.isPinned);
   const unpinned = rendered.filter((i) => !i.isPinned);
 
+  // The sortable set in DOM order (board cards are static, not sortable).
+  // Each item's `index` must match this ordering for dnd-kit's sorting.
+  const sortable = [...pinned, ...unpinned];
+  const indexOf = new Map(sortable.map((item, i) => [item.id, i]));
+
+  function handleDragEnd(event: DragEndEvent) {
+    if (event.canceled) {
+      setOrder(null);
+      return;
+    }
+    const next = move(sortable, event);
+    setOrder(next);
+    onReorder(next.map((i) => i.id));
+  }
+
   const renderItem = (item: AnyItem) => (
     <GridItem
       key={item.id}
       item={item}
+      index={indexOf.get(item.id)!}
       isNew={item.id === newItemId}
       onOpen={() => onOpen(item)}
       onEdit={() => onEdit(item)}
@@ -119,27 +108,20 @@ export function ItemGrid({
   );
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
-      onDragCancel={() => setOrder(null)}
-    >
-      <SortableContext items={rendered.map((i) => i.id)} strategy={rectSortingStrategy}>
-        <div className="mx-auto grid max-w-[1440px] grid-cols-1 items-start gap-7 px-6 py-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {pinned.map(renderItem)}
-          {boards.map((b) => (
-            <BoardCard
-              key={b.id}
-              board={b}
-              onOpen={() => onOpenBoard(b.id)}
-              onDelete={() => onDeleteBoard(b)}
-              onMove={() => onMoveBoard(b)}
-            />
-          ))}
-          {unpinned.map(renderItem)}
-        </div>
-      </SortableContext>
-    </DndContext>
+    <DragDropProvider onDragEnd={handleDragEnd}>
+      <div className="mx-auto grid max-w-[1440px] grid-cols-1 items-start gap-7 px-6 py-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4">
+        {pinned.map(renderItem)}
+        {boards.map((b) => (
+          <BoardCard
+            key={b.id}
+            board={b}
+            onOpen={() => onOpenBoard(b.id)}
+            onDelete={() => onDeleteBoard(b)}
+            onMove={() => onMoveBoard(b)}
+          />
+        ))}
+        {unpinned.map(renderItem)}
+      </div>
+    </DragDropProvider>
   );
 }

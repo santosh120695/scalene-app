@@ -4,6 +4,7 @@ import { ReactElement } from "react";
 import { AppPage } from "@/pages/AppPage";
 import { Navigate, Route, useLocation } from "react-router-dom";
 import { useAuth } from "@/stores/auth";
+import { TodosPage } from "@/pages/TodosPage";
 
 type IRouteType = {
   path: string;
@@ -18,7 +19,7 @@ const IRoutes: IRouteType[] = [
     element: <LoginPage />,
   },
   {
-    path: "/#registeer",
+    path: "/register",
     need_auth: false,
     element: <RegisterPage />,
   },
@@ -39,7 +40,7 @@ const IRoutes: IRouteType[] = [
   },
   {
     path: "/todos",
-    element: <AppPage />,
+    element: <TodosPage />,
     need_auth: true,
   },
   {

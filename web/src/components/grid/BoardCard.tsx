@@ -26,30 +26,21 @@ export function BoardCard({ board, onOpen, onDelete, onMove }: Props) {
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
-          style={{ width: "100%", maxWidth: 300, height: 400 }}
-          className="group relative flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-surface-sunken transition-colors hover:border-[var(--border-strong)]"
+          style={{ width: "100%", aspectRatio: "3 / 4" }}
+          className="group relative flex flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-surface-sunken shadow-sm transition-[color,border-color,box-shadow] hover:border-[var(--border-strong)] hover:shadow-md"
         >
-          <button
-            onClick={onOpen}
-            aria-label={`Open board ${board.title}`}
-            className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-center"
-          >
+          <div className="flex items-center gap-2 border-b border-[var(--border)] bg-surface-primary px-3 py-1.5">
             <Folder
-              size={40}
-              strokeWidth={1.25}
-              className="text-ink-muted transition-colors group-hover:text-brand"
+              size={15}
+              strokeWidth={1.5}
+              className="shrink-0 text-ink-secondary"
             />
-            <span className="line-clamp-2 text-[14px] font-medium text-ink-primary">
-              {board.title}
-            </span>
-          </button>
-
-          <div className="flex items-center gap-2 border-t border-[var(--border)] bg-surface-primary px-3 py-1.5">
-            <Folder size={15} strokeWidth={1.5} className="shrink-0 text-ink-secondary" />
             <span className="flex-1 truncate text-[12px] font-medium text-ink-secondary">
               Board
             </span>
-            <span className="text-[11px] text-ink-muted">{board.itemCount ?? 0}</span>
+            <span className="text-[11px] text-ink-muted">
+              {board.itemCount ?? 0}
+            </span>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -73,6 +64,21 @@ export function BoardCard({ board, onOpen, onDelete, onMove }: Props) {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          <button
+            onClick={onOpen}
+            aria-label={`Open board ${board.title}`}
+            className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-center"
+          >
+            <Folder
+              size={40}
+              strokeWidth={1.25}
+              className="text-ink-muted transition-colors group-hover:text-brand"
+            />
+            <span className="line-clamp-2 text-[14px] font-medium text-ink-primary">
+              {board.title}
+            </span>
+          </button>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>

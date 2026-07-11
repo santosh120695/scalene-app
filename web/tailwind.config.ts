@@ -73,8 +73,9 @@ export default {
         lg: "10px",
       },
       fontFamily: {
-        display: ['"Poppins"', "system-ui", "sans-serif"],
-        sans: ['"DM Sans"', "system-ui", "sans-serif"],
+        // Notion uses a single UI typeface; Inter is the standard stand-in.
+        display: ['"Inter"', "system-ui", "sans-serif"],
+        sans: ['"Inter"', "system-ui", "sans-serif"],
         mono: ['"Fira Code"', "monospace"],
       },
       boxShadow: {
