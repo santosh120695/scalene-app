@@ -15,6 +15,7 @@ export const journalKeys = {
 };
 
 export function useJournalTemplates() {
+  console.log("fetching templates")
   return useQuery({
     queryKey: journalKeys.templates,
     queryFn: journalApi.listTemplates,

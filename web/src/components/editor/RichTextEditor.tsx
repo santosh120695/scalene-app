@@ -2,12 +2,17 @@ import {
   useEditor,
   useEditorState,
   EditorContent,
-  BubbleMenu,
   type Editor,
 } from "@tiptap/react";
+// v3 moved the menu components out of the main entry and onto Floating UI.
+import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import Table from "@tiptap/extension-table";
+// TextStyle is the base <span style> mark; Color and FontFamily hang their
+// attributes off it. Used by the block drag-handle menu to recolor / re-font a
+// single line, and to render that styling everywhere content is shown.
+import { TextStyle, Color, FontFamily } from "@tiptap/extension-text-style";
+import { Table } from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
 import TableHeader from "@tiptap/extension-table-header";
 import TableCell from "@tiptap/extension-table-cell";
@@ -17,6 +22,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { SlashCommand, type OnImage } from "./slash-command";
 import { ResizableImage } from "./resizable-image";
 import { TrailingNode } from "./trailing-node";
+import { BlockDragHandle } from "./BlockDragHandle";
 import {
   Bold,
   Italic,
@@ -126,15 +132,8 @@ function TableMenu({ editor }: { editor: Editor }) {
       editor={editor}
       pluginKey="tableMenu"
       shouldShow={({ editor }) => editor.isActive("table")}
-      // Note: do NOT set appendTo: document.body here. BubbleMenu renders its
-      // children in the main React tree; moving that DOM outside the React root
-      // breaks React 18's event delegation, so the buttons' onClick never fires.
-      tippyOptions={{
-        placement: "top",
-        maxWidth: "none",
-        animation: false,
-        theme: "kc-menu",
-      }}
+      // v3 positions the menu with Floating UI; styling is handled by the child.
+      options={{ placement: "top" }}
     >
       <div className="flex items-center gap-0.5 rounded-md border border-[var(--border)] bg-surface-primary p-1 shadow-panel">
         <ToolbarButton
@@ -362,9 +361,24 @@ export function RichTextEditor({
   );
 
   const editor = useEditor({
+    // Client-only SPA (no SSR) — render immediately to avoid a first-paint flash.
+    immediatelyRender: true,
     extensions: [
-      StarterKit,
+      // v3's StarterKit bundles TrailingNode (we register our own below) plus
+      // Link/Underline, which the editor didn't have before — disable all three
+      // to keep behavior identical to the v2 setup.
+      StarterKit.configure({
+        trailingNode: false,
+        link: false,
+        underline: false,
+      }),
       Placeholder.configure({ placeholder }),
+      // Registered everywhere so per-line color/font content renders in every
+      // editor (including the read-only-ish sub-note composer); the controls to
+      // set them live in the full editor's drag-handle menu.
+      TextStyle,
+      Color,
+      FontFamily,
       TaskList,
       TaskItemWithId.configure({ nested: false }),
       // Loaded everywhere so embedded <img>s always render; the "add image"
@@ -427,7 +441,7 @@ export function RichTextEditor({
   // Keep editor content in sync if the value prop changes externally.
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value, false);
+      editor.commands.setContent(value, { emitUpdate: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, value]);
@@ -458,6 +472,7 @@ export function RichTextEditor({
             onChange={onFilePicked}
           />
           <TableMenu editor={editor} />
+          <BlockDragHandle editor={editor} />
         </>
       )}
       <EditorContent

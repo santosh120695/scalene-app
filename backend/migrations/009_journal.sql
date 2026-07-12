@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS journal_preferences (
 
 -- ---- Seed the 3 system templates ----
 INSERT INTO journal_templates (name, template, is_system, sort_order) VALUES
-  ('Study log', '{"sections":[
+  ('Todays log', '{"sections":[
       {"heading":"Topics covered","placeholder":"What did you study today?"},
       {"heading":"Doubts","placeholder":"What tripped you up?"},
       {"heading":"Tomorrow''s plan","placeholder":"Next steps"}]}', TRUE, 0),

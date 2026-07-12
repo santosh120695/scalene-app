@@ -22,31 +22,39 @@ export function JournalItemEditor({ item }: { item: JournalItem }) {
   const update = useUpdateJournalItem();
   const remove = useDeleteJournalItem();
 
-  const [title, setTitle] = useState(item.title);
+  // const [title, setTitle] = useState(item.title);
   const [content, setContent] = useState(item.content);
   // Style applies live; seed from the item and update instantly on change.
   const [style, setStyle] = useState<JournalStyleConfig>(item.styleConfig ?? {});
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [fullscreen, setFullscreen] = useState(false);
+  // Full-screen fills the content area (right of the sidebar), not the whole
+  // viewport — so the sidebar stays visible. Sized to the #app-content region.
+  const [fsRect, setFsRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   // Track the last-persisted values so the debounce only fires on real edits.
-  const savedRef = useRef({ title: item.title, content: item.content });
+  const savedRef = useRef({ content: item.content });
   const timerRef = useRef<number | null>(null);
   const savedTimerRef = useRef<number | null>(null);
 
   // Debounced autosave for title/content.
   useEffect(() => {
-    if (title === savedRef.current.title && content === savedRef.current.content) {
+    if (content === savedRef.current.content) {
       return;
     }
     setSaveState("saving");
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => {
       update.mutate(
-        { id: item.id, title, content },
+        { id: item.id, content },
         {
           onSuccess: () => {
-            savedRef.current = { title, content };
+            savedRef.current = { content };
             setSaveState("saved");
             if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
             savedTimerRef.current = window.setTimeout(
@@ -64,7 +72,7 @@ export function JournalItemEditor({ item }: { item: JournalItem }) {
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };
-  }, [title, content, item.id, update]);
+  }, [content, item.id, update]);
 
   // In full-screen focus mode, lock body scroll and let Esc exit. (The Esc
   // handler runs at capture but only acts when no popover is open, so pressing
@@ -82,6 +90,27 @@ export function JournalItemEditor({ item }: { item: JournalItem }) {
     return () => {
       document.body.style.overflow = prevOverflow;
       document.removeEventListener("keydown", onKey);
+    };
+  }, [fullscreen]);
+
+  // Keep the full-screen overlay aligned to the content region so the sidebar
+  // stays visible. A ResizeObserver on #app-content also catches sidebar
+  // collapse/expand (which resizes the content area without a window resize).
+  useEffect(() => {
+    if (!fullscreen) return;
+    const main = document.getElementById("app-content");
+    if (!main) return;
+    const update = () => {
+      const r = main.getBoundingClientRect();
+      setFsRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(main);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
     };
   }, [fullscreen]);
 
@@ -103,7 +132,9 @@ export function JournalItemEditor({ item }: { item: JournalItem }) {
 
   const backdrop = resolveBackdrop(style);
   const { style: bdStyle, isImage } = backdropStyle(backdrop);
+  console.log(bdStyle)
   const contentFont = fontClass(style.fontKey ?? DEFAULT_FONT_KEY);
+  console.log(content)
 
   // The item this editor holds lives in a { style } snapshot; keep the popover
   // fed with the live style.
@@ -115,7 +146,9 @@ export function JournalItemEditor({ item }: { item: JournalItem }) {
     <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] bg-card px-4 py-2">
       <AutosaveIndicator state={saveState} />
       <div className="flex items-center gap-2">
-        <CustomizationPopover item={liveItem} onChange={applyStyle} />
+        {fullscreen &&
+          <CustomizationPopover item={liveItem} onChange={applyStyle} />
+        }
         <button
           onClick={() => setFullscreen((f) => !f)}
           aria-label={fullscreen ? "Exit full screen" : "Full screen"}
@@ -144,19 +177,20 @@ export function JournalItemEditor({ item }: { item: JournalItem }) {
   // fill the viewport in full-screen mode.
   const body = (
     <div
-      style={bdStyle}
+      // style={bdStyle}
       className={cn(
-        fullscreen ? "flex-1 overflow-y-auto p-4 sm:p-10" : "p-4 sm:p-8",
+        fullscreen ? "flex-1 overflow-y-auto p-4 sm:p-10" : "sm:p-0",
       )}
     >
       <div
         className={cn(
-          "journal-sheet mx-auto rounded-lg px-5 py-5 sm:px-8",
-          fullscreen ? "max-w-3xl" : "max-w-2xl",
+          "journal-sheet rounded-lg",
+          fullscreen ? "mx-auto max-w-3xl px-5 py-5 sm:px-8" : "w-full h-40",
           isImage ? "bg-white/85 shadow-sm backdrop-blur-sm" : "bg-transparent",
         )}
+        style={bdStyle}
       >
-        <input
+        {/*<input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Untitled"
@@ -164,7 +198,7 @@ export function JournalItemEditor({ item }: { item: JournalItem }) {
             "w-full bg-transparent text-2xl font-semibold outline-none placeholder:text-ink-muted/50",
             contentFont,
           )}
-        />
+        />*/}
         <div className={cn("journal-content mt-3", contentFont)}>
           <RichTextEditor
             value={content}
@@ -183,7 +217,19 @@ export function JournalItemEditor({ item }: { item: JournalItem }) {
 
   if (fullscreen) {
     return createPortal(
-      <div className="fixed inset-0 z-50 flex flex-col bg-page">
+      <div
+        className="fixed z-50 flex flex-col bg-page"
+        style={
+          fsRect
+            ? {
+                top: fsRect.top,
+                left: fsRect.left,
+                width: fsRect.width,
+                height: fsRect.height,
+              }
+            : { inset: 0 }
+        }
+      >
         {header}
         {body}
       </div>,

@@ -7,6 +7,14 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@tiptap/extension-collaboration": path.resolve(
+        __dirname,
+        "./src/lib/tiptap-collab-shims.ts",
+      ),
+      "@tiptap/y-tiptap": path.resolve(
+        __dirname,
+        "./src/lib/tiptap-collab-shims.ts",
+      ),
     },
   },
   test: {
