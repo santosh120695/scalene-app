@@ -1,10 +1,25 @@
 import { RegisterPage } from "@/pages/RegisterPage";
 import { LoginPage } from "@/pages/LoginPage";
-import { ReactElement } from "react";
+import { lazy, ReactElement, Suspense } from "react";
 import { AppPage } from "@/pages/AppPage";
 import { Navigate, Route, useLocation } from "react-router-dom";
 import { useAuth } from "@/stores/auth";
 import { TodosPage } from "@/pages/TodosPage";
+
+// The journal is lazy-loaded — its editor bundle (Tiptap + journal UI) stays out
+// of the initial app chunk until the user opens /journal.
+const JournalHomePage = lazy(() =>
+  import("@/pages/JournalPage").then((m) => ({ default: m.JournalHomePage })),
+);
+const JournalTodayPage = lazy(() =>
+  import("@/pages/JournalPage").then((m) => ({ default: m.JournalTodayPage })),
+);
+
+function LazyRoute({ children }: { children: ReactElement }) {
+  return (
+    <Suspense fallback={<div className="h-screen bg-page" />}>{children}</Suspense>
+  );
+}
 
 type IRouteType = {
   path: string;
@@ -44,6 +59,24 @@ const IRoutes: IRouteType[] = [
     need_auth: true,
   },
   {
+    path: "/journal",
+    element: (
+      <LazyRoute>
+        <JournalHomePage />
+      </LazyRoute>
+    ),
+    need_auth: true,
+  },
+  {
+    path: "/journal/today",
+    element: (
+      <LazyRoute>
+        <JournalTodayPage />
+      </LazyRoute>
+    ),
+    need_auth: true,
+  },
+  {
     path: "*",
     element: <Navigate to="/" replace />,
     need_auth: true,
@@ -80,6 +113,7 @@ function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
 function MountRoutes() {
   return IRoutes.map((route) => (
     <Route
+      key={route.path}
       path={route.path}
       element={
         route.need_auth ? (

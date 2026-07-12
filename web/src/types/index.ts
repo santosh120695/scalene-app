@@ -109,6 +109,69 @@ export interface SearchResult {
   snippet: string;
 }
 
+// ---- Journal (daily entries) ----
+
+export interface JournalTemplateSection {
+  heading: string;
+  placeholder?: string;
+}
+
+export interface JournalTemplate {
+  id: string;
+  name: string;
+  template: { sections: JournalTemplateSection[] };
+  sortOrder: number;
+}
+
+export type BackdropType = "color" | "image" | "upload";
+
+export interface Backdrop {
+  type: BackdropType;
+  value: string; // palette hex for "color", image URL for "image"/"upload"
+}
+
+export interface JournalStyleConfig {
+  backdrop?: Backdrop;
+  fontKey?: string; // one of JOURNAL_FONTS keys
+  templateId?: string; // originating template, for "set as default"
+}
+
+export interface JournalItem {
+  id: string;
+  journalDayId: string;
+  userId: string;
+  title: string;
+  content: string; // Tiptap HTML
+  styleConfig: JournalStyleConfig;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// A day summary card shown on the journal home list.
+export interface JournalDayCard {
+  id: string;
+  date: string; // YYYY-MM-DD
+  itemCount: number;
+  totalWords: number;
+  latestItem: { id: string; title: string; contentPreview: string } | null;
+}
+
+// A full day with its items (the day view).
+export interface JournalDay {
+  id: string;
+  date: string;
+  itemCount: number;
+  totalWords: number;
+  items: JournalItem[];
+}
+
+export interface JournalPreferenceConfig {
+  defaultTemplateId?: string;
+  backdrop?: Backdrop;
+  fontKey?: string;
+}
+
 export interface Todo {
   id: string;
   // Only set for todos synced from a note's checklist content; standalone

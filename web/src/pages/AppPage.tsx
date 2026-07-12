@@ -320,6 +320,7 @@ export function AppPage() {
         activeBoardId={boardId}
         onSelectBoard={(id) => navigate(`/b/${id}`)}
         onOpenTodos={() => navigate("/todos")}
+        onOpenJournal={() => navigate("/journal")}
         onNewBoard={openNewBoard}
         onDeleteBoard={handleDeleteBoard}
         onMoveBoard={(board) => setMoveBoardTarget(board)}

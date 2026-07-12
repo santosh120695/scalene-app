@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, API_BASE } from "./client";
 import type { AnyItem } from "@/types";
 
 export async function getItem(id: string): Promise<AnyItem> {
@@ -63,6 +63,20 @@ export async function uploadImage(
 export async function updateImageCaption(id: string, caption: string): Promise<AnyItem> {
   const { data } = await api.put<AnyItem>(`/images/${id}`, { caption });
   return data;
+}
+
+// Uploads an image to embed inline in TipTap note content. Returns a stable URL
+// (backed by the /editor/images/:id redirect route) that never expires, unlike
+// the presigned URLs used for first-class image cards.
+export async function uploadEditorImage(
+  file: File
+): Promise<{ id: string; url: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await api.post<{ id: string }>("/editor/images", form);
+  // Build the absolute src against the same API origin the app already uses;
+  // the serve route redirects it to a freshly presigned object URL.
+  return { id: data.id, url: `${API_BASE}/editor/images/${data.id}` };
 }
 
 export async function createExcalidraw(payload: {

@@ -3,6 +3,7 @@ import {
   ListTodo,
   LogOut,
   Moon,
+  NotebookPen,
   PanelLeft,
   PanelLeftClose,
   Plus,
@@ -29,11 +30,13 @@ interface Props {
   boards: Board[];
   activeBoardId?: string;
   activeTodos?: boolean;
+  activeJournal?: boolean;
   collapsed: boolean;
   user: User | null;
   onToggle: () => void;
   onSelectBoard: (id: string) => void;
   onOpenTodos: () => void;
+  onOpenJournal: () => void;
   onNewBoard: () => void;
   onDeleteBoard: (board: Board) => void;
   onMoveBoard: (board: Board) => void;
@@ -57,10 +60,12 @@ function ExpandedSidebar({
   boards,
   activeBoardId,
   activeTodos,
+  activeJournal,
   user,
   onToggle,
   onSelectBoard,
   onOpenTodos,
+  onOpenJournal,
   onNewBoard,
   onDeleteBoard,
   onMoveBoard,
@@ -100,13 +105,19 @@ function ExpandedSidebar({
         </button>
       </div>
 
-      {/* Todos — directly below the header */}
+      {/* Todos + Journal — directly below the header */}
       <div className="px-3 pt-3 pb-1">
         <SidebarItem
           icon={ListTodo}
           label="Todos"
           onClick={onOpenTodos}
           active={activeTodos}
+        />
+        <SidebarItem
+          icon={NotebookPen}
+          label="Journal"
+          onClick={onOpenJournal}
+          active={activeJournal}
         />
       </div>
 
@@ -256,9 +267,11 @@ function BoardRow({
 function CollapsedRail({
   user,
   activeTodos,
+  activeJournal,
   onToggle,
   onNewBoard,
   onOpenTodos,
+  onOpenJournal,
   onLogout,
 }: Props) {
   const initial = (user?.fullName || user?.email || "?")
@@ -275,6 +288,12 @@ function CollapsedRail({
         label="Todos"
         onClick={onOpenTodos}
         active={activeTodos}
+      />
+      <RailButton
+        icon={NotebookPen}
+        label="Journal"
+        onClick={onOpenJournal}
+        active={activeJournal}
       />
       <div className="mt-1 mb-2.5 h-px w-7 bg-[var(--border)]" />
       <RailButton icon={Plus} label="New board" onClick={onNewBoard} />

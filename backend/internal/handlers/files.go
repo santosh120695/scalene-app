@@ -216,6 +216,76 @@ func (h *Handler) UpdateImage(c *gin.Context) {
 	c.JSON(http.StatusOK, h.itemMap(c.Request.Context(), *ci))
 }
 
+// POST /api/v1/editor/images (multipart) — upload an image to embed inline in
+// TipTap note content. Returns a stable, non-expiring URL pointing at the
+// serve route below (which redirects to a freshly presigned URL on each load).
+func (h *Handler) UploadEditorImage(c *gin.Context) {
+	userID := middleware.UserID(c)
+
+	data, filename, err := readUpload(c, maxImageSize)
+	if err != nil {
+		badRequest(c, err.Error())
+		return
+	}
+	mimeType := http.DetectContentType(data)
+	if !strings.HasPrefix(mimeType, "image/") {
+		badRequest(c, "Uploaded file is not a valid image")
+		return
+	}
+
+	ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(filename), "."))
+	if ext == "" {
+		ext = "jpg"
+	}
+	imgID := uuid.New()
+	key := fmt.Sprintf("%s/editor/%s.%s", userID, imgID, ext)
+	ctx := c.Request.Context()
+	if _, err := h.Storage.Upload(ctx, key, data, mimeType); err != nil {
+		serverError(c, err)
+		return
+	}
+
+	img := models.EditorImage{
+		ID:       imgID,
+		UserID:   userID,
+		FilePath: key,
+		MimeType: mimeType,
+		FileSize: int64(len(data)),
+	}
+	if err := h.DB.Create(&img).Error; err != nil {
+		_ = h.Storage.Delete(ctx, key)
+		serverError(c, err)
+		return
+	}
+
+	// The client composes the browser-facing URL from its own API base
+	// (frontend and API are separate origins), so we return just the id.
+	c.JSON(http.StatusCreated, gin.H{"id": imgID})
+}
+
+// GET /api/v1/editor/images/:id — public serve route for inline note images.
+// Intentionally unauthenticated: <img> tags cannot send a Bearer header, and
+// the id is an unguessable UUID (same possession-based model as presigned URLs
+// and the local /files route). Redirects to a freshly presigned object URL.
+func (h *Handler) ServeEditorImage(c *gin.Context) {
+	imgID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		notFound(c, "Image not found")
+		return
+	}
+	var img models.EditorImage
+	if err := h.DB.First(&img, "id = ?", imgID).Error; err != nil {
+		notFound(c, "Image not found")
+		return
+	}
+	url := h.sign(c.Request.Context(), img.FilePath, 24)
+	if url == "" {
+		serverError(c, fmt.Errorf("could not resolve image url"))
+		return
+	}
+	c.Redirect(http.StatusFound, url)
+}
+
 type updateTitleReq struct {
 	Title string `json:"title"`
 }

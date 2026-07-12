@@ -283,6 +283,85 @@ body {
 .tiptap.resize-cursor {
   cursor: col-resize;
 }
+/* Inline images render through a resizable/movable NodeView (resizable-image.tsx). */
+.tiptap {
+  position: relative; /* anchor for the drop-position indicator */
+}
+.tiptap .ki-image {
+  margin: 0.75em 0;
+}
+.tiptap .ki-image-inner {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+}
+.tiptap .ki-image-inner img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  border-radius: 6px;
+}
+.tiptap .ki-image[data-selected="true"] .ki-image-inner img {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.tiptap .ki-image.is-moving .ki-image-inner {
+  opacity: 0.5;
+}
+/* Corner handle shown only while the image is selected. */
+.tiptap .ki-image-handle {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: var(--primary);
+  border: 2px solid var(--card, #fff);
+  border-radius: 3px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+/* Grip handle (top-left) for dragging the image up/down; shown on hover/select. */
+.tiptap .ki-image-move {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: grab;
+  touch-action: none;
+}
+.tiptap .ki-image:hover .ki-image-move,
+.tiptap .ki-image[data-selected="true"] .ki-image-move {
+  display: flex;
+}
+.tiptap .ki-image-move:active {
+  cursor: grabbing;
+}
+/* Insertion line shown while dragging an image to a new vertical position. */
+.tiptap .ki-image-drop-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 20;
+}
+/* Defensive fallback for any raw <img> not wrapped by the NodeView. */
+.tiptap img {
+  max-width: 100%;
+  height: auto;
+}
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
@@ -413,17 +492,20 @@ body {
   font-weight: 600;
 }
 
-/* Slash-command popup: strip tippy's default dark theme — the menu card
-   inside provides its own surface, border, and shadow. */
-.tippy-box[data-theme~="kc-slash"] {
+/* Slash-command / table popups: strip tippy's default dark theme — the menu
+   card inside provides its own surface, border, and shadow. */
+.tippy-box[data-theme~="kc-slash"],
+.tippy-box[data-theme~="kc-menu"] {
   background: transparent;
   color: inherit;
   box-shadow: none;
 }
-.tippy-box[data-theme~="kc-slash"] .tippy-content {
+.tippy-box[data-theme~="kc-slash"] .tippy-content,
+.tippy-box[data-theme~="kc-menu"] .tippy-content {
   padding: 0;
 }
-.tippy-box[data-theme~="kc-slash"] .tippy-arrow {
+.tippy-box[data-theme~="kc-slash"] .tippy-arrow,
+.tippy-box[data-theme~="kc-menu"] .tippy-arrow {
   display: none;
 }
 
@@ -550,4 +632,48 @@ body {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Journal — per-item writing fonts (applied to item content only) and
+   the "paper sheet" that floats a legible surface over image backdrops.
+   ───────────────────────────────────────────────────────────────────── */
+.font-journal-sans {
+  font-family: "DM Sans", "Inter", system-ui, sans-serif;
+}
+.font-journal-serif {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 1.15em;
+}
+.font-journal-mono {
+  font-family: "Fira Code", monospace;
+}
+.font-journal-hand {
+  font-family: "Caveat", cursive;
+  font-size: 1.35em;
+}
+
+/* A journal item always writes on a light "page", regardless of app theme,
+   so curated tints and dark ink stay legible. */
+.journal-sheet {
+  color: #37352f;
+}
+.journal-sheet .tiptap,
+.journal-sheet .tiptap p,
+.journal-sheet .tiptap h1,
+.journal-sheet .tiptap h2,
+.journal-sheet .tiptap h3,
+.journal-sheet .tiptap li {
+  color: #37352f;
+}
+.journal-sheet .tiptap .is-editor-empty:first-child::before {
+  color: rgba(55, 53, 47, 0.4);
+}
+
+/* Roomier writing surface for journal items (the shared editor defaults to
+   12px, too small for long-form). Font-family comes from the .font-journal-*
+   class on the wrapper; these em-based sizes scale off this base. */
+.journal-content .tiptap {
+  font-size: 15px;
+  line-height: 1.7;
 }

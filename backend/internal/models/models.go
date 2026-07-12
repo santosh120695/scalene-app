@@ -95,6 +95,19 @@ type ImageItem struct {
 	ThumbnailURL string    `gorm:"type:text" json:"thumbnailUrl,omitempty"`
 }
 
+// EditorImage — an image embedded inline in a note/sub-note's TipTap content
+// via an <img> tag, as opposed to a first-class ImageItem canvas card. The row
+// maps a stable id to a storage key; the /editor/images/:id route redirects to
+// a freshly presigned URL so the persisted note HTML never holds an expiring one.
+type EditorImage struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID    uuid.UUID `gorm:"type:uuid;index;not null" json:"userId"`
+	FilePath  string    `gorm:"type:text;not null" json:"filePath"`
+	MimeType  string    `gorm:"type:varchar(100)" json:"mimeType,omitempty"`
+	FileSize  int64     `gorm:"not null;default:0" json:"fileSize"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 // Todo — either a checklist item extracted from a note's TipTap content
 // (kept in sync with the `data-todo-id`-tagged <li> it was parsed from, see
 // handlers.syncTodosFromContent) or a standalone quick-added todo with no
@@ -122,6 +135,57 @@ type SubNote struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+// JournalDay — a single calendar day (in the user's timezone) that contains one
+// or more journal items. item_count and total_words are server-maintained
+// aggregates recalculated whenever an item is created, edited, or deleted.
+type JournalDay struct {
+	ID         uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID     uuid.UUID `gorm:"type:uuid;index;not null" json:"userId"`
+	Date       time.Time `gorm:"type:date;not null" json:"date"`
+	ItemCount  int       `gorm:"not null;default:0" json:"itemCount"`
+	TotalWords int       `gorm:"not null;default:0" json:"totalWords"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
+}
+
+// JournalItem — one entry within a day. Content is Tiptap HTML. StyleConfig is a
+// per-item snapshot of the backdrop + font, copied from the user's preferences
+// at creation and thereafter edited independently (changing prefs never
+// restyles existing items).
+type JournalItem struct {
+	ID           uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	JournalDayID uuid.UUID `gorm:"type:uuid;index;not null" json:"journalDayId"`
+	UserID       uuid.UUID `gorm:"type:uuid;index;not null" json:"userId"`
+	Title        string    `gorm:"type:varchar(500);not null;default:''" json:"title"`
+	Content      string    `gorm:"type:text;not null;default:''" json:"content"` // Tiptap HTML
+	StyleConfig  JSONB     `gorm:"type:jsonb;not null;default:'{}'" json:"styleConfig"`
+	SortOrder    int       `gorm:"not null;default:0" json:"sortOrder"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
+}
+
+// JournalTemplate — an ordered set of sections that scaffolds a new item's
+// content and drives the template picker's mini preview. System templates
+// (is_system) are seeded and shared across all users.
+type JournalTemplate struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	Name      string    `gorm:"type:varchar(255);not null" json:"name"`
+	Template  JSONB     `gorm:"type:jsonb;not null;default:'{}'" json:"template"`
+	IsSystem  bool      `gorm:"not null;default:false" json:"isSystem"`
+	SortOrder int       `gorm:"not null;default:0" json:"sortOrder"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// JournalPreference — a user's saved default template + look, one row per user.
+type JournalPreference struct {
+	ID               uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID           uuid.UUID `gorm:"type:uuid;uniqueIndex;not null" json:"userId"`
+	PreferenceConfig JSONB     `gorm:"type:jsonb;not null;default:'{}'" json:"preferenceConfig"`
+	CreatedAt        time.Time `json:"createdAt"`
+	UpdatedAt        time.Time `json:"updatedAt"`
+}
+
 func (User) TableName() string           { return "users" }
 func (Board) TableName() string          { return "boards" }
 func (CanvasItem) TableName() string     { return "canvas_items" }
@@ -132,3 +196,9 @@ func (ImageItem) TableName() string      { return "image_items" }
 func (ExcalidrawItem) TableName() string { return "excalidraw_items" }
 func (SubNote) TableName() string        { return "sub_notes" }
 func (Todo) TableName() string           { return "todos" }
+func (EditorImage) TableName() string    { return "editor_images" }
+
+func (JournalDay) TableName() string        { return "journal_days" }
+func (JournalItem) TableName() string       { return "journal_items" }
+func (JournalTemplate) TableName() string   { return "journal_templates" }
+func (JournalPreference) TableName() string { return "journal_preferences" }
