@@ -48,7 +48,7 @@ export function JournalItemPreview({
       {isImage ?
         <div style={bdStyle} className="w-full h-20"></div>
         :
-        <div style={{ background: style.backdrop?.value }} className="w-full h-20"></div>
+        <div style={{ background: style.backdrop?.value || "#1e3a5f"}} className="w-full h-20"></div>
       }
       <div
          dangerouslySetInnerHTML={{

@@ -159,7 +159,7 @@ export function JournalItemEditor({
   const expanded = fullscreen || standalone;
 
   const backdrop = resolveBackdrop(style);
-  const { style: bdStyle} = backdropStyle(backdrop);
+  const { style: bdStyle, isImage} = backdropStyle(backdrop);
   const contentFont = fontClass(style.fontKey ?? DEFAULT_FONT_KEY);
 
   // The item this editor holds lives in a { style } snapshot; keep the popover
@@ -224,7 +224,7 @@ export function JournalItemEditor({
   );
 
   const headerBackdrop = (
-    <div style={bdStyle} className="w-full h-60">
+    <div style={isImage ? bdStyle : { background: (style?.backdrop?.value || "#1e3a5f") }} className="w-full h-60">
 
     </div>
   )
