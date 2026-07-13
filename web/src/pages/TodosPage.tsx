@@ -109,6 +109,7 @@ export function TodosPage() {
         activeTodos
         onSelectBoard={(id) => navigate(`/b/${id}`)}
         onOpenTodos={() => {}}
+        onOpenJournal={() => navigate("/journal")}
         onNewBoard={() => setNewBoardOpen(true)}
         onDeleteBoard={handleDeleteBoard}
         onMoveBoard={(board) => setMoveBoardTarget(board)}

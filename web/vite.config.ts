@@ -56,6 +56,17 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // The drag-handle extension imports these from the yjs/collab stack but
+      // only uses them on the collaborative path (unused here). Shim them to
+      // keep yjs out of the bundle. See src/lib/tiptap-collab-shims.ts.
+      "@tiptap/extension-collaboration": path.resolve(
+        __dirname,
+        "./src/lib/tiptap-collab-shims.ts",
+      ),
+      "@tiptap/y-tiptap": path.resolve(
+        __dirname,
+        "./src/lib/tiptap-collab-shims.ts",
+      ),
     },
   },
   server: {

@@ -5,6 +5,7 @@ import (
 
 	"knowledgecanvas/config"
 	"knowledgecanvas/internal/handlers"
+	"knowledgecanvas/routes"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,20 +30,28 @@ func TestSetupRouter(t *testing.T) {
 				t.Fatalf("setupRouter panicked (route conflict?): %v", rec)
 			}
 		}()
-		r = setupRouter(h, cfg)
+		r = routes.SetupRouter(h, cfg)
 	}()
 
 	want := map[string]bool{
-		"POST /api/v1/auth/login":           false,
-		"GET /api/v1/boards/:id":            false,
-		"PATCH /api/v1/boards/:id/reorder":  false,
-		"GET /api/v1/items/:id":             false,
-		"GET /api/v1/items/:id/sub-notes":   false,
-		"POST /api/v1/notes":                false,
-		"POST /api/v1/links":                false,
-		"POST /api/v1/pdfs":                 false,
-		"POST /api/v1/images":               false,
-		"GET /api/v1/search":                false,
+		"POST /api/v1/auth/login":          false,
+		"GET /api/v1/boards/:id":           false,
+		"PATCH /api/v1/boards/:id/reorder": false,
+		"GET /api/v1/items/:id":            false,
+		"GET /api/v1/items/:id/sub-notes":  false,
+		"POST /api/v1/notes":               false,
+		"POST /api/v1/links":               false,
+		"POST /api/v1/pdfs":                false,
+		"POST /api/v1/images":              false,
+		"GET /api/v1/search":               false,
+		"GET /api/v1/journal/templates":    false,
+		"GET /api/v1/journal/days":         false,
+		"GET /api/v1/journal/days/today":   false,
+		"POST /api/v1/journal/items":       false,
+		"PATCH /api/v1/journal/items/:id":  false,
+		"DELETE /api/v1/journal/items/:id": false,
+		"PUT /api/v1/journal/preferences":  false,
+		"POST /api/v1/journal/backdrops":   false,
 	}
 	for _, ri := range r.Routes() {
 		key := ri.Method + " " + ri.Path

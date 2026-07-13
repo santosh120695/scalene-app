@@ -22,7 +22,7 @@ func SetupRouter(h *handlers.Handler, cfg *config.Config) *gin.Engine {
 		cors.Config{
 			AllowOrigins:     strings.Split(cfg.AllowedOrigins, ","),
 			AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Client-TZ-Offset"},
 			AllowCredentials: true,
 			MaxAge:           12 * time.Hour,
 		},
@@ -35,6 +35,10 @@ func SetupRouter(h *handlers.Handler, cfg *config.Config) *gin.Engine {
 	if cfg.StorageDriver != "oracle" {
 		api.StaticFS("/files", http.Dir(storage.LocalRoot(cfg)))
 	}
+
+	// Inline note images are served unauthenticated (an <img> tag cannot send a
+	// Bearer header); the UUID id is the capability, mirroring presigned URLs.
+	api.GET("/editor/images/:id", h.ServeEditorImage)
 
 	// ---- Auth (rate-limited, unauthenticated) ----
 	authGroup := api.Group("/auth")
@@ -79,6 +83,7 @@ func SetupRouter(h *handlers.Handler, cfg *config.Config) *gin.Engine {
 		auth.PUT("/pdfs/:id", h.UpdatePDF)
 		auth.POST("/images", h.CreateImage)
 		auth.PUT("/images/:id", h.UpdateImage)
+		auth.POST("/editor/images", h.UploadEditorImage)
 		auth.POST("/excalidraws", h.CreateExcalidraw)
 		auth.PUT("/excalidraws/:id", h.UpdateExcalidraw)
 
@@ -94,6 +99,24 @@ func SetupRouter(h *handlers.Handler, cfg *config.Config) *gin.Engine {
 		auth.POST("/todos", h.CreateQuickTodo)
 		auth.PATCH("/todos/:id", h.ToggleTodo)
 		auth.DELETE("/todos/:id", h.DeleteTodo)
+
+		// Journal — daily entries: days hold items scaffolded from templates.
+		journal := auth.Group("/journal")
+		{
+			journal.GET("/templates", h.ListJournalTemplates)
+			journal.GET("/days", h.ListJournalDays)
+			journal.GET("/days/today", h.GetTodayJournalDay)
+			journal.GET("/day/:date", h.GetJournalDayByDate)
+			journal.GET("/tags", h.ListJournalTags)
+			journal.POST("/items", h.CreateJournalItem)
+			journal.GET("/items", h.ListJournalItemsByTag) // ?tag=...
+			journal.GET("/items/:id", h.GetJournalItem)
+			journal.PATCH("/items/:id", h.UpdateJournalItem)
+			journal.DELETE("/items/:id", h.DeleteJournalItem)
+			journal.GET("/preferences", h.GetJournalPreferences)
+			journal.PUT("/preferences", h.UpdateJournalPreferences)
+			journal.POST("/backdrops", h.UploadJournalBackdrop)
+		}
 	}
 
 	return r

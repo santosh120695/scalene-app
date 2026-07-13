@@ -12,8 +12,11 @@ interface Props {
   activeBoardId?: string;
   /** Highlights the Todos entry in the sidebar (todos view). */
   activeTodos?: boolean;
+  /** Highlights the Journal entry in the sidebar (journal view). */
+  activeJournal?: boolean;
   onSelectBoard: (id: string) => void;
   onOpenTodos: () => void;
+  onOpenJournal: () => void;
   onNewBoard: () => void;
   onDeleteBoard: (board: Board) => void;
   onMoveBoard: (board: Board) => void;
@@ -32,8 +35,10 @@ export function AppShell({
   mobileTitle,
   activeBoardId,
   activeTodos,
+  activeJournal,
   onSelectBoard,
   onOpenTodos,
+  onOpenJournal,
   onNewBoard,
   onDeleteBoard,
   onMoveBoard,
@@ -63,6 +68,7 @@ export function AppShell({
     boards,
     activeBoardId,
     activeTodos,
+    activeJournal,
     user,
     onDeleteBoard,
     onLogout,
@@ -78,6 +84,7 @@ export function AppShell({
           onToggle={toggleSidebar}
           onSelectBoard={onSelectBoard}
           onOpenTodos={onOpenTodos}
+          onOpenJournal={onOpenJournal}
           onNewBoard={onNewBoard}
           onMoveBoard={onMoveBoard}
         />
@@ -97,6 +104,7 @@ export function AppShell({
               onToggle={() => setMobileNav(false)}
               onSelectBoard={closeAfter(onSelectBoard)}
               onOpenTodos={closeAfter(onOpenTodos)}
+              onOpenJournal={closeAfter(onOpenJournal)}
               onNewBoard={closeAfter(onNewBoard)}
               onMoveBoard={closeAfter(onMoveBoard)}
             />
@@ -105,7 +113,10 @@ export function AppShell({
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        <main className="scroll-thin flex-1 overflow-y-auto overflow-x-hidden bg-card">
+        <main
+          id="app-content"
+          className="scroll-thin flex-1 overflow-y-auto overflow-x-hidden bg-card"
+        >
           {/* Mobile top bar — hamburger to open the nav drawer */}
           <div className="sticky top-0 z-20 flex h-12 items-center gap-2 border-b border-[var(--border)] bg-card px-3 lg:hidden">
             <button

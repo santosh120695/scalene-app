@@ -97,9 +97,9 @@ export function GridItem({
             >
               <GripVertical size={14} strokeWidth={1.5} />
             </button>
-            <span className="item-title flex-1 truncate text-[13px] font-medium text-ink-primary">
+            {/*<span className="item-title flex-1 truncate text-[13px] font-medium text-ink-primary">
               {itemTitle(item)}
-            </span>
+            </span>*/}
             {item.isPinned && (
               <Pin
                 size={14}

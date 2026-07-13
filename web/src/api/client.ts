@@ -31,9 +31,12 @@ export function clearCachedUser() {
   localStorage.removeItem(USER_KEY);
 }
 
-const baseURL = (import.meta.env.VITE_API_URL || "") + "/api/v1";
+// The API origin+prefix the browser uses to reach the backend. Exported so
+// callers can build absolute asset URLs (e.g. inline editor images) that point
+// at the same origin — the frontend and API are deployed separately.
+export const API_BASE = (import.meta.env.VITE_API_URL || "") + "/api/v1";
 
-export const api = axios.create({ baseURL });
+export const api = axios.create({ baseURL: API_BASE });
 
 // Attach the Bearer token to every request (PRD §8.1).
 api.interceptors.request.use((config) => {

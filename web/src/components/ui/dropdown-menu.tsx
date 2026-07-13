@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 export const DropdownMenu = DropdownPrimitive.Root;
 export const DropdownMenuTrigger = DropdownPrimitive.Trigger;
+export const DropdownMenuSub = DropdownPrimitive.Sub;
 
 const contentClass =
   "z-50 min-w-[10rem] overflow-hidden rounded-md border border-[var(--border)] bg-surface-primary p-1 shadow-panel data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95";
@@ -45,3 +46,29 @@ export const DropdownMenuSeparator = React.forwardRef<
   />
 ));
 DropdownMenuSeparator.displayName = "DropdownMenuSeparator";
+
+export const DropdownMenuSubTrigger = React.forwardRef<
+  React.ElementRef<typeof DropdownPrimitive.SubTrigger>,
+  React.ComponentPropsWithoutRef<typeof DropdownPrimitive.SubTrigger>
+>(({ className, ...props }, ref) => (
+  <DropdownPrimitive.SubTrigger
+    ref={ref}
+    className={cn(itemClass, "data-[state=open]:bg-surface-sunken", className)}
+    {...props}
+  />
+));
+DropdownMenuSubTrigger.displayName = "DropdownMenuSubTrigger";
+
+export const DropdownMenuSubContent = React.forwardRef<
+  React.ElementRef<typeof DropdownPrimitive.SubContent>,
+  React.ComponentPropsWithoutRef<typeof DropdownPrimitive.SubContent>
+>(({ className, ...props }, ref) => (
+  <DropdownPrimitive.Portal>
+    <DropdownPrimitive.SubContent
+      ref={ref}
+      className={cn(contentClass, className)}
+      {...props}
+    />
+  </DropdownPrimitive.Portal>
+));
+DropdownMenuSubContent.displayName = "DropdownMenuSubContent";

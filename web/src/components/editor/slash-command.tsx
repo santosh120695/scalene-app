@@ -16,6 +16,7 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Image as ImageIcon,
   List,
   ListOrdered,
   ListTodo,
@@ -36,7 +37,25 @@ interface CommandItem {
   command: (props: { editor: Editor; range: Range }) => void;
 }
 
-const COMMANDS: CommandItem[] = [
+// Called when the "Image" command is picked. The host clears the slash range,
+// then opens a file picker and uploads the chosen file (see RichTextEditor).
+export type OnImage = (props: { editor: Editor; range: Range }) => void;
+
+function buildCommands(onImage?: OnImage): CommandItem[] {
+  return [...BASE_COMMANDS, ...(onImage ? [imageCommand(onImage)] : [])];
+}
+
+function imageCommand(onImage: OnImage): CommandItem {
+  return {
+    title: "Image",
+    description: "Upload an image",
+    icon: ImageIcon,
+    keywords: ["image", "picture", "photo", "img", "upload"],
+    command: ({ editor, range }) => onImage({ editor, range }),
+  };
+}
+
+const BASE_COMMANDS: CommandItem[] = [
   {
     title: "Text",
     description: "Plain paragraph",
@@ -132,10 +151,10 @@ const COMMANDS: CommandItem[] = [
   },
 ];
 
-function filterCommands(query: string): CommandItem[] {
+function filterCommands(commands: CommandItem[], query: string): CommandItem[] {
   const q = query.toLowerCase().trim();
-  if (!q) return COMMANDS;
-  return COMMANDS.filter(
+  if (!q) return commands;
+  return commands.filter(
     (item) =>
       item.title.toLowerCase().includes(q) ||
       item.keywords.some((k) => k.includes(q))
@@ -237,6 +256,9 @@ export const SlashCommand = Extension.create({
 
   addOptions() {
     return {
+      // Optional handler for the "Image" command; when absent the command is
+      // hidden (e.g. the compact composer, which doesn't load this extension).
+      onImage: undefined as OnImage | undefined,
       suggestion: {
         char: "/",
         startOfLine: false,
@@ -256,11 +278,12 @@ export const SlashCommand = Extension.create({
   },
 
   addProseMirrorPlugins() {
+    const commands = buildCommands(this.options.onImage);
     return [
       Suggestion({
         editor: this.editor,
         ...this.options.suggestion,
-        items: ({ query }: { query: string }) => filterCommands(query),
+        items: ({ query }: { query: string }) => filterCommands(commands, query),
         render: () => {
           let component: ReactRenderer<SlashListHandle, ListProps>;
           let popup: Instance[];
