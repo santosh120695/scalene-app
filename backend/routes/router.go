@@ -106,7 +106,11 @@ func SetupRouter(h *handlers.Handler, cfg *config.Config) *gin.Engine {
 			journal.GET("/templates", h.ListJournalTemplates)
 			journal.GET("/days", h.ListJournalDays)
 			journal.GET("/days/today", h.GetTodayJournalDay)
+			journal.GET("/day/:date", h.GetJournalDayByDate)
+			journal.GET("/tags", h.ListJournalTags)
 			journal.POST("/items", h.CreateJournalItem)
+			journal.GET("/items", h.ListJournalItemsByTag) // ?tag=...
+			journal.GET("/items/:id", h.GetJournalItem)
 			journal.PATCH("/items/:id", h.UpdateJournalItem)
 			journal.DELETE("/items/:id", h.DeleteJournalItem)
 			journal.GET("/preferences", h.GetJournalPreferences)

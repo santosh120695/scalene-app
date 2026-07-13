@@ -143,9 +143,17 @@ export interface JournalItem {
   title: string;
   content: string; // Tiptap HTML
   styleConfig: JournalStyleConfig;
+  tags: string[];
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  date?: string; // the item's day (YYYY-MM-DD-ish), returned by the API
+}
+
+// A distinct tag with how many items carry it.
+export interface JournalTagCount {
+  tag: string;
+  count: number;
 }
 
 // A day summary card shown on the journal home list.

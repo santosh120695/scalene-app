@@ -9,7 +9,7 @@ export interface FontOption {
 }
 
 export const JOURNAL_FONTS: FontOption[] = [
-  { key: "dm-sans", label: "DM Sans", className: "font-journal-sans" },
+  { key: "dm-sans", label: "Sans", className: "font-journal-sans" },
   { key: "instrument-serif", label: "Serif", className: "font-journal-serif" },
   { key: "fira-code", label: "Mono", className: "font-journal-mono" },
   { key: "caveat", label: "Handwriting", className: "font-journal-hand" },

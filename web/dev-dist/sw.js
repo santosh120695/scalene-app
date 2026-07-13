@@ -22,7 +22,7 @@ if (!self.define) {
   const singleRequire = (uri, parentUri) => {
     uri = new URL(uri + ".js", parentUri).href;
     return registry[uri] || (
-
+      
         new Promise(resolve => {
           if ("document" in self) {
             const script = document.createElement("script");
@@ -35,7 +35,7 @@ if (!self.define) {
             resolve();
           }
         })
-
+      
       .then(() => {
         let promise = registry[uri];
         if (!promise) {
@@ -67,7 +67,6 @@ if (!self.define) {
     });
   };
 }
-<<<<<<< HEAD
 define(['./workbox-8d0d8005'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
@@ -82,7 +81,7 @@ define(['./workbox-8d0d8005'], (function (workbox) { 'use strict';
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
     "url": "index.html",
-    "revision": "0.b6dkcae3dq"
+    "revision": "0.8erodl32els"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
@@ -112,49 +111,3 @@ define(['./workbox-8d0d8005'], (function (workbox) { 'use strict';
   }), 'GET');
 
 }));
-=======
-define(['./workbox-8d0d8005'], (function (workbox) { 'use strict';
-
-  self.skipWaiting();
-  workbox.clientsClaim();
-  /**
-   * The precacheAndRoute() method efficiently caches and responds to
-   * requests for URLs in the manifest.
-   * See https://goo.gl/S9QRab
-   */
-  workbox.precacheAndRoute([{
-    "url": "registerSW.js",
-    "revision": "3ca0b8505b4bec776b69afdba2768812"
-  }, {
-    "url": "index.html",
-    "revision": "0.jduh7toufcc"
-  }], {});
-  workbox.cleanupOutdatedCaches();
-  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
-    allowlist: [/^\/$/]
-  }));
-  workbox.registerRoute(({
-    url
-  }) => url.pathname.startsWith("/api/v1/"), new workbox.NetworkFirst({
-    "cacheName": "api-cache",
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 500,
-      maxAgeSeconds: 604800
-    }), new workbox.CacheableResponsePlugin({
-      statuses: [0, 200]
-    })]
-  }), 'GET');
-  workbox.registerRoute(({
-    url
-  }) => url.origin === "https://fonts.googleapis.com" || url.origin === "https://fonts.gstatic.com", new workbox.CacheFirst({
-    "cacheName": "google-fonts-cache",
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 30,
-      maxAgeSeconds: 31536000
-    }), new workbox.CacheableResponsePlugin({
-      statuses: [0, 200]
-    })]
-  }), 'GET');
-
-}));
->>>>>>> 76d4917 (fixed issue and moved tiptap to v3)

@@ -6,6 +6,19 @@ export function parseLocalDate(iso: string): Date {
   return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
 
+// Format a local Date as a YYYY-MM-DD wire string (no timezone shift).
+export function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Local today as a YYYY-MM-DD wire string.
+export function todayISO(): string {
+  return toISODate(new Date());
+}
+
 export function formatDayHeading(iso: string): string {
   return parseLocalDate(iso).toLocaleDateString(undefined, {
     weekday: "long",

@@ -5,6 +5,7 @@ import type {
   JournalDay,
   JournalDayCard,
   JournalItem,
+  JournalTagCount,
   JournalPreferenceConfig,
   JournalStyleConfig,
 } from "@/types";
@@ -42,6 +43,18 @@ export async function getToday(): Promise<JournalDay | null> {
   }
 }
 
+// A specific day (YYYY-MM-DD) with its items, or null when it has no entry.
+// Lets past days be viewed, not just today.
+export async function getDay(date: string): Promise<JournalDay | null> {
+  try {
+    const { data } = await api.get<JournalDay>(`/journal/day/${date}`);
+    return data;
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.status === 404) return null;
+    throw err;
+  }
+}
+
 export async function createItem(
   templateId: string,
   title = "",
@@ -54,12 +67,39 @@ export async function createItem(
   return data;
 }
 
+// A single item, for the dedicated edit page (deep links load the item
+// directly rather than via today's day).
+export async function getItem(id: string): Promise<JournalItem> {
+  const { data } = await api.get<JournalItem>(`/journal/items/${id}`);
+  return data;
+}
+
 export async function updateItem(
   id: string,
-  patch: { title?: string; content?: string; styleConfig?: JournalStyleConfig },
+  patch: {
+    title?: string;
+    content?: string;
+    styleConfig?: JournalStyleConfig;
+    tags?: string[];
+  },
 ): Promise<JournalItem> {
   const { data } = await api.patch<JournalItem>(`/journal/items/${id}`, patch);
   return data;
+}
+
+// All of the user's distinct tags with item counts (sidebar + autocomplete).
+export async function listTags(): Promise<JournalTagCount[]> {
+  const { data } = await api.get<JournalTagCount[]>("/journal/tags");
+  return data;
+}
+
+// All items carrying a given tag (newest day first); each item carries its date.
+export async function listItemsByTag(tag: string): Promise<JournalItem[]> {
+  const { data } = await api.get<{ tag: string; items: JournalItem[] }>(
+    "/journal/items",
+    { params: { tag } },
+  );
+  return data.items;
 }
 
 export async function deleteItem(id: string): Promise<void> {

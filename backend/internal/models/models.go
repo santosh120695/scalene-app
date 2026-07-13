@@ -153,15 +153,17 @@ type JournalDay struct {
 // at creation and thereafter edited independently (changing prefs never
 // restyles existing items).
 type JournalItem struct {
-	ID           uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	JournalDayID uuid.UUID `gorm:"type:uuid;index;not null" json:"journalDayId"`
-	UserID       uuid.UUID `gorm:"type:uuid;index;not null" json:"userId"`
-	Title        string    `gorm:"type:varchar(500);not null;default:''" json:"title"`
-	Content      string    `gorm:"type:text;not null;default:''" json:"content"` // Tiptap HTML
-	StyleConfig  JSONB     `gorm:"type:jsonb;not null;default:'{}'" json:"styleConfig"`
-	SortOrder    int       `gorm:"not null;default:0" json:"sortOrder"`
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedAt    time.Time `json:"updatedAt"`
+	ID           uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	JournalDayID uuid.UUID  `gorm:"type:uuid;index;not null" json:"journalDayId"`
+	UserID       uuid.UUID  `gorm:"type:uuid;index;not null" json:"userId"`
+	Title        string     `gorm:"type:varchar(500);not null;default:''" json:"title"`
+	Content      string     `gorm:"type:text;not null;default:''" json:"content"` // Tiptap HTML
+	StyleConfig  JSONB       `gorm:"type:jsonb;not null;default:'{}'" json:"styleConfig"`
+	Tags         StringArray `gorm:"type:text[];not null;default:'{}'" json:"tags"`
+	SortOrder    int         `gorm:"not null;default:0" json:"sortOrder"`
+	CreatedAt    time.Time   `json:"createdAt"`
+	UpdatedAt    time.Time   `json:"updatedAt"`
+	JournalDay   JournalDay  `json:"journalDay"`
 }
 
 // JournalTemplate — an ordered set of sections that scaffolds a new item's

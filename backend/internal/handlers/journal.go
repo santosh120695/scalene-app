@@ -87,7 +87,7 @@ func scaffoldFromTemplate(tmpl models.JSONB) string {
 
 func (h *Handler) ownedJournalItem(itemID, userID uuid.UUID) (*models.JournalItem, error) {
 	var it models.JournalItem
-	if err := h.DB.First(&it, "id = ?", itemID).Error; err != nil {
+	if err := h.DB.Preload("JournalDay").First(&it, "id = ?", itemID).Error; err != nil {
 		return nil, err
 	}
 	if it.UserID != userID {
@@ -131,10 +131,28 @@ func journalItemMap(it models.JournalItem) gin.H {
 		"title":        it.Title,
 		"content":      it.Content,
 		"styleConfig":  it.StyleConfig,
+		"tags":         it.Tags,
 		"sortOrder":    it.SortOrder,
 		"createdAt":    it.CreatedAt,
 		"updatedAt":    it.UpdatedAt,
+		"date":         it.JournalDay.Date,
 	}
+}
+
+// normalizeTags trims whitespace, drops empties, and de-dupes (case-sensitive)
+// while preserving order.
+func normalizeTags(tags []string) []string {
+	seen := make(map[string]bool, len(tags))
+	out := make([]string, 0, len(tags))
+	for _, t := range tags {
+		t = strings.TrimSpace(t)
+		if t == "" || seen[t] {
+			continue
+		}
+		seen[t] = true
+		out = append(out, t)
+	}
+	return out
 }
 
 // contentPreview returns a short plain-text excerpt of an item's content.
@@ -210,14 +228,13 @@ func (h *Handler) ListJournalDays(c *gin.Context) {
 	c.JSON(http.StatusOK, out)
 }
 
-// GET /api/v1/journal/days/today
-func (h *Handler) GetTodayJournalDay(c *gin.Context) {
-	userID := middleware.UserID(c)
-	_, todayStr := clientDate(c)
-
+// respondDayWithItems writes the full day (all items) for the given user + date
+// string, or 404 when that day has no entry. Shared by the today and by-date
+// endpoints.
+func (h *Handler) respondDayWithItems(c *gin.Context, userID uuid.UUID, dateStr string) {
 	var day models.JournalDay
-	if err := h.DB.Where("user_id = ? AND date = ?", userID, todayStr).First(&day).Error; err != nil {
-		notFound(c, "No journal entry for today")
+	if err := h.DB.Where("user_id = ? AND date = ?", userID, dateStr).First(&day).Error; err != nil {
+		notFound(c, "No journal entry for that day")
 		return
 	}
 
@@ -238,6 +255,26 @@ func (h *Handler) GetTodayJournalDay(c *gin.Context) {
 		"totalWords": day.TotalWords,
 		"items":      itemMaps,
 	})
+}
+
+// GET /api/v1/journal/days/today
+func (h *Handler) GetTodayJournalDay(c *gin.Context) {
+	userID := middleware.UserID(c)
+	_, todayStr := clientDate(c)
+	h.respondDayWithItems(c, userID, todayStr)
+}
+
+// GET /api/v1/journal/day/:date — a specific day (YYYY-MM-DD) with its items, so
+// past entries are viewable. Singular "day" path avoids a Gin static/param
+// conflict with the static /days/today route.
+func (h *Handler) GetJournalDayByDate(c *gin.Context) {
+	userID := middleware.UserID(c)
+	dateStr := c.Param("date")
+	if _, err := time.Parse(dateLayout, dateStr); err != nil {
+		badRequest(c, "Invalid date; expected YYYY-MM-DD")
+		return
+	}
+	h.respondDayWithItems(c, userID, dateStr)
 }
 
 // ---- Items ------------------------------------------------------------------
@@ -328,6 +365,7 @@ type updateJournalItemReq struct {
 	Title       *string       `json:"title"`
 	Content     *string       `json:"content"`
 	StyleConfig *models.JSONB `json:"styleConfig"`
+	Tags        *[]string     `json:"tags"`
 }
 
 // PATCH /api/v1/journal/items/:id — autosave title/content + customization.
@@ -363,6 +401,9 @@ func (h *Handler) UpdateJournalItem(c *gin.Context) {
 		if req.StyleConfig != nil {
 			updates["style_config"] = *req.StyleConfig
 		}
+		if req.Tags != nil {
+			updates["tags"] = models.StringArray(normalizeTags(*req.Tags))
+		}
 		if len(updates) == 0 {
 			return nil
 		}
@@ -381,6 +422,76 @@ func (h *Handler) UpdateJournalItem(c *gin.Context) {
 	}
 	item, _ = h.ownedJournalItem(itemID, userID)
 	c.JSON(http.StatusOK, journalItemMap(*item))
+}
+
+// GET /api/v1/journal/items/:id — a single item, for the dedicated edit page
+// (deep links load the item directly rather than via today's day).
+func (h *Handler) GetJournalItem(c *gin.Context) {
+	userID := middleware.UserID(c)
+	itemID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		badRequest(c, "Invalid item id")
+		return
+	}
+	item, err := h.ownedJournalItem(itemID, userID)
+	if err != nil {
+		notFound(c, "Item not found")
+		return
+	}
+	c.JSON(http.StatusOK, journalItemMap(*item))
+}
+
+// GET /api/v1/journal/tags — the user's distinct tags with item counts, for the
+// sidebar tags list and the editor's tag-input autocomplete.
+func (h *Handler) ListJournalTags(c *gin.Context) {
+	userID := middleware.UserID(c)
+
+	type tagCount struct {
+		Tag   string `json:"tag"`
+		Count int    `json:"count"`
+	}
+	var rows []tagCount
+	err := h.DB.Raw(`
+		SELECT tag, COUNT(*) AS count
+		FROM (SELECT unnest(tags) AS tag FROM journal_items WHERE user_id = ?) t
+		GROUP BY tag
+		ORDER BY count DESC, tag ASC`, userID).Scan(&rows).Error
+	if err != nil {
+		serverError(c, err)
+		return
+	}
+	if rows == nil {
+		rows = []tagCount{}
+	}
+	c.JSON(http.StatusOK, rows)
+}
+
+// GET /api/v1/journal/items?tag=... — all of the user's items carrying the given
+// tag, newest day first. Each item carries its day's date so the client can
+// group by day. Uses a query param to avoid path-encoding issues with the tag.
+func (h *Handler) ListJournalItemsByTag(c *gin.Context) {
+	userID := middleware.UserID(c)
+	tag := strings.TrimSpace(c.Query("tag"))
+	if tag == "" {
+		badRequest(c, "tag is required")
+		return
+	}
+
+	var items []models.JournalItem
+	err := h.DB.Preload("JournalDay").
+		Joins("JOIN journal_days d ON d.id = journal_items.journal_day_id").
+		Where("journal_items.user_id = ? AND journal_items.tags @> ARRAY[?]::text[]", userID, tag).
+		Order("d.date DESC, journal_items.sort_order ASC").
+		Find(&items).Error
+	if err != nil {
+		serverError(c, err)
+		return
+	}
+	itemMaps := make([]gin.H, 0, len(items))
+	for _, it := range items {
+		itemMaps = append(itemMaps, journalItemMap(it))
+	}
+	c.JSON(http.StatusOK, gin.H{"tag": tag, "items": itemMaps})
 }
 
 // DELETE /api/v1/journal/items/:id — deletes item, recalculates aggregates,

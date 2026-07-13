@@ -634,46 +634,4 @@ body {
   }
 }
 
-/* ─────────────────────────────────────────────────────────────────────
-   Journal — per-item writing fonts (applied to item content only) and
-   the "paper sheet" that floats a legible surface over image backdrops.
-   ───────────────────────────────────────────────────────────────────── */
-.font-journal-sans {
-  font-family: "DM Sans", "Inter", system-ui, sans-serif;
-}
-.font-journal-serif {
-  font-family: "Instrument Serif", Georgia, serif;
-  font-size: 1.15em;
-}
-.font-journal-mono {
-  font-family: "Fira Code", monospace;
-}
-.font-journal-hand {
-  font-family: "Caveat", cursive;
-  font-size: 1.35em;
-}
-
-/* A journal item always writes on a light "page", regardless of app theme,
-   so curated tints and dark ink stay legible. */
-.journal-sheet {
-  color: #37352f;
-}
-.journal-sheet .tiptap,
-.journal-sheet .tiptap p,
-.journal-sheet .tiptap h1,
-.journal-sheet .tiptap h2,
-.journal-sheet .tiptap h3,
-.journal-sheet .tiptap li {
-  color: #37352f;
-}
-.journal-sheet .tiptap .is-editor-empty:first-child::before {
-  color: rgba(55, 53, 47, 0.4);
-}
-
-/* Roomier writing surface for journal items (the shared editor defaults to
-   12px, too small for long-form). Font-family comes from the .font-journal-*
-   class on the wrapper; these em-based sizes scale off this base. */
-.journal-content .tiptap {
-  font-size: 15px;
-  line-height: 1.7;
-}
+/* Journal styles live in ./journal.css (imported in main.tsx). */

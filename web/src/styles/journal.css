@@ -1,0 +1,76 @@
+/* ─────────────────────────────────────────────────────────────────────
+   Journal styles — per-item writing fonts, the editor writing surface, and
+   the day-view preview cards. Kept separate from globals.css.
+   ───────────────────────────────────────────────────────────────────── */
+
+/* Per-item writing fonts (applied to item content only, via the .font-journal-*
+   class on the content wrapper). */
+.font-journal-sans {
+  /* Match the shared notes editor's font so the default journal writing looks
+     the same (DM Sans has a smaller x-height than Inter at the same px). */
+  font-family: "Inter", system-ui, sans-serif;
+}
+.font-journal-serif {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 1.15em;
+}
+.font-journal-mono {
+  font-family: "Fira Code", monospace;
+}
+.font-journal-hand {
+  font-family: "Caveat", cursive;
+  font-size: 1.35em;
+}
+
+/* ---- Editor writing surface ---- */
+
+.journal-content .tiptap {
+  font-size: 16px;
+  line-height: 1.7;
+}
+.journal-content .tiptap h1 {
+  margin-top: 0;
+}
+.journal-content .journal-body {
+  padding: 1rem;
+}
+
+/* ---- Day-view preview cards ----
+   Compact typography matching the note preview (.note-preview) so journal and
+   note cards read at the same size. Font-family still comes from the item's
+   .font-journal-* wrapper class. */
+.journal-preview {
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 1rem;
+}
+.journal-preview p {
+  margin: 0 0 0.3em;
+}
+.journal-preview h1 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 0.2em;
+  padding-bottom: 0.5em;
+}
+.journal-preview h2 {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0 0 0.2em;
+}
+.journal-preview h3 {
+  font-size: 12px;
+  font-weight: 500;
+}
+.journal-preview ul {
+  list-style: disc;
+  padding-left: 1.1em;
+}
+.journal-preview ol {
+  list-style: decimal;
+  padding-left: 1.1em;
+}
+.journal-preview code {
+  font-family: "Fira Code", monospace;
+  font-size: 0.9em;
+}

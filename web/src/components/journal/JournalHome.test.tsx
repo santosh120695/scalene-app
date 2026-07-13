@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { JournalDayCard } from "@/types";
 
@@ -11,11 +12,21 @@ const state = vi.hoisted(() => ({
 vi.mock("@/hooks/useJournal", () => ({
   useJournalDays: () => ({ data: state.days, isLoading: state.isLoading }),
   useCreateJournalItem: () => ({ mutate: vi.fn(), isPending: false }),
+  useJournalTags: () => ({ data: [] }),
   useJournalPreferences: () => ({ data: {} }),
   useJournalTemplates: () => ({ data: [] }),
 }));
 
 import { JournalHome } from "./JournalHome";
+
+// JournalTagsNav (rendered inside JournalHome) uses router hooks.
+function renderHome() {
+  return render(
+    <MemoryRouter>
+      <JournalHome onEnterToday={() => {}} onOpenDay={() => {}} />
+    </MemoryRouter>,
+  );
+}
 
 describe("JournalHome", () => {
   beforeEach(() => {
@@ -24,7 +35,7 @@ describe("JournalHome", () => {
   });
 
   it("shows the write-today action and the empty state with no days", () => {
-    render(<JournalHome onEnterToday={() => {}} />);
+    renderHome();
     expect(screen.getByText(/write today/i)).toBeInTheDocument();
     expect(screen.getByText(/no entries yet/i)).toBeInTheDocument();
   });
@@ -39,7 +50,7 @@ describe("JournalHome", () => {
         latestItem: { id: "i1", title: "Study log", contentPreview: "hi" },
       },
     ];
-    render(<JournalHome onEnterToday={() => {}} />);
+    renderHome();
     expect(screen.getByText(/2 entries/i)).toBeInTheDocument();
     expect(screen.getByText(/40 words/i)).toBeInTheDocument();
     expect(screen.getByText("Study log")).toBeInTheDocument();

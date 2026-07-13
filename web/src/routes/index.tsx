@@ -14,6 +14,15 @@ const JournalHomePage = lazy(() =>
 const JournalTodayPage = lazy(() =>
   import("@/pages/JournalPage").then((m) => ({ default: m.JournalTodayPage })),
 );
+const JournalDayPage = lazy(() =>
+  import("@/pages/JournalPage").then((m) => ({ default: m.JournalDayPage })),
+);
+const JournalItemPage = lazy(() =>
+  import("@/pages/JournalPage").then((m) => ({ default: m.JournalItemPage })),
+);
+const JournalTagPage = lazy(() =>
+  import("@/pages/JournalPage").then((m) => ({ default: m.JournalTagPage })),
+);
 
 function LazyRoute({ children }: { children: ReactElement }) {
   return (
@@ -72,6 +81,33 @@ const IRoutes: IRouteType[] = [
     element: (
       <LazyRoute>
         <JournalTodayPage />
+      </LazyRoute>
+    ),
+    need_auth: true,
+  },
+  {
+    path: "/journal/day/:date",
+    element: (
+      <LazyRoute>
+        <JournalDayPage />
+      </LazyRoute>
+    ),
+    need_auth: true,
+  },
+  {
+    path: "/journal/item/:itemId",
+    element: (
+      <LazyRoute>
+        <JournalItemPage />
+      </LazyRoute>
+    ),
+    need_auth: true,
+  },
+  {
+    path: "/journal/tag/:tag",
+    element: (
+      <LazyRoute>
+        <JournalTagPage />
       </LazyRoute>
     ),
     need_auth: true,
