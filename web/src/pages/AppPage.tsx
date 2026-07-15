@@ -24,6 +24,8 @@ import { BoardToolbar } from "@/components/board/BoardToolbar";
 import { AddItemFab } from "@/components/board/AddItemFab";
 import { ItemGrid } from "@/components/grid/ItemGrid";
 import { ItemDetailView } from "@/components/detail/ItemDetailView";
+import { NoteTemplatePicker } from "@/components/detail/NoteTemplatePicker";
+import type { NoteTemplate } from "@/lib/noteTemplates";
 import { ResizableSplit } from "@/components/detail/ResizableSplit";
 import { SplitBrowser } from "@/components/detail/SplitBrowser";
 import { NewBoardDialog } from "@/components/board/NewBoardDialog";
@@ -114,6 +116,7 @@ export function AppPage() {
   const [linkOpen, setLinkOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [newItemId, setNewItemId] = useState<string | null>(null);
+  const [noteTemplateOpen, setNoteTemplateOpen] = useState(false);
   const [creatingNote, setCreatingNote] = useState(false);
   const [creatingExcalidraw, setCreatingExcalidraw] = useState(false);
   // When set, a newly-created item opens in a split beside this item.
@@ -126,18 +129,27 @@ export function AppPage() {
     setTimeout(() => setNewItemId((cur) => (cur === id ? null : cur)), 600);
   }
 
-  // Create an empty note and jump straight into its full-page editor.
-  async function handleNewNote() {
+  // "New note" first asks which template to start from; the picker then calls
+  // createNoteFromTemplate to actually create it.
+  function handleNewNote() {
+    if (!boardId || creatingNote) return;
+    setNoteTemplateOpen(true);
+  }
+
+  // Create a note scaffolded from the chosen template and jump straight into its
+  // full-page editor.
+  async function createNoteFromTemplate(template: NoteTemplate) {
     if (!boardId || creatingNote) return;
     setCreatingNote(true);
     try {
       const created = await itemsApi.createNote({
         boardId,
         title: "",
-        content: "",
+        content: template.content,
       });
       qc.invalidateQueries({ queryKey: boardKeys.list });
       boardQuery.refetch();
+      setNoteTemplateOpen(false);
       navigate(`/b/${boardId}/item/${created.id}`);
     } catch (e) {
       toast.error(errMessage(e, "Could not create note"));
@@ -419,6 +431,12 @@ export function AppPage() {
       </AppShell>
 
       {/* Dialogs */}
+      <NoteTemplatePicker
+        open={noteTemplateOpen}
+        onClose={() => setNoteTemplateOpen(false)}
+        onPick={createNoteFromTemplate}
+        creating={creatingNote}
+      />
       <NewBoardDialog
         open={newBoardOpen}
         onOpenChange={setNewBoardOpen}
