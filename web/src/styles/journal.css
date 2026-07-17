@@ -42,6 +42,7 @@
 .journal-preview {
   font-size: 12px;
   line-height: 1.45;
+  --tasklist-line: 1.45em;
   padding: 1rem;
 }
 .journal-preview p {
