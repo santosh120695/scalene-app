@@ -16,6 +16,7 @@ import { RichTextEditor } from "@/components/editor/RichTextEditor";
 import { SubNotes } from "@/components/detail/SubNotes";
 import { Button } from "@/components/ui/button";
 import { cn, sanitizeHtml } from "@/lib/utils";
+import { detectEmbed } from "@/lib/embeds";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/sonner";
 import { errMessage } from "@/api/client";
@@ -113,7 +114,7 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center py-3 gap-2 border-b border-[var(--border)] bg-card px-3 sm:gap-3 sm:px-4">
+      <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center py-3 gap-2  bg-card px-3 sm:gap-3 sm:px-4">
         <nav className="flex min-w-0 items-center gap-1 text-[13px]">
           {ancestors.map((crumb) => (
             <span
@@ -213,7 +214,17 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
           )}
         </div>
       </header>
-      <div className="animate__animated animate__faster animate__zoomIn flex min-h-0 flex-1 flex-col">
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col",
+          // The zoomIn entry animation applies a CSS transform. Excalidraw sizes
+          // its canvas from getBoundingClientRect on mount; a transformed
+          // ancestor makes it measure a scaled (or zero) rect and never recover,
+          // so the drawing canvas collapses. Skip the animation for drawings.
+          item?.itemType !== "excalidraw" &&
+            "animate__animated animate__faster animate__zoomIn",
+        )}
+      >
         {isLoading || !item ? (
           <div className="flex-1 px-10 py-8">
             <LoadingBody />
@@ -230,7 +241,9 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
             </div>
           </div>
         ) : item.itemType === "excalidraw" ? (
-          <div className="flex min-h-0 flex-1">
+          // Positioning context so the canvas can pin itself to fill the whole
+          // pane below the header, regardless of flex sizing on lazy mount.
+          <div className="relative flex min-h-0 flex-1">
             <ExcalidrawPane
               key={item.id}
               drawing={item as ExcalidrawItem}
@@ -365,6 +378,7 @@ function ExcalidrawPane({
 // ── Read-only detail for link / image / pdf ──
 function MediaDetail({ item }: { item: AnyItem }) {
   if (item.itemType === "link") {
+    const embed = detectEmbed(item.url);
     const hasArticle = !!item.content;
     return (
       <div className="flex flex-col gap-3">
@@ -383,7 +397,23 @@ function MediaDetail({ item }: { item: AnyItem }) {
           </a>
         </p>
 
-        {hasArticle ? (
+        {embed ? (
+          // YouTube / Instagram render as a live embed instead of a reader view.
+          <div
+            className="mt-1 w-full overflow-hidden rounded-xl bg-black"
+            style={{ aspectRatio: embed.aspect }}
+          >
+            <iframe
+              src={embed.embedUrl}
+              title={item.title || item.domain || "Embedded content"}
+              className="h-full w-full border-0"
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+              allowFullScreen
+            />
+          </div>
+        ) : hasArticle ? (
           // Pocket-style reader view of the extracted article.
           <article
             className="reader mt-2"

@@ -2,9 +2,6 @@ import { useCallback, useEffect, useRef } from "react";
 import { Excalidraw, exportToBlob } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 
-// The item model stores an Excalidraw scene as `{ elements, appState }`, plus a
-// base64 PNG `thumbnail` for the card preview. We keep those exact props so
-// ItemDetailView's drawing pane, the API, and the card body are unchanged.
 interface SceneData {
   elements: readonly unknown[];
   appState: Record<string, unknown>;
@@ -15,7 +12,6 @@ interface Props {
   onSave: (data: { sceneData: SceneData; thumbnail: string }) => void;
 }
 
-// Minimal shape of the fields we read off Excalidraw elements.
 type ElementLike = { version?: number; isDeleted?: boolean };
 
 const AUTOSAVE_DELAY_MS = 800;
@@ -30,9 +26,6 @@ function blobToDataURL(blob: Blob): Promise<string> {
   });
 }
 
-// A cheap signature that changes when the scene content changes (elements added,
-// removed, or edited — Excalidraw bumps each element's `version` on edit) but
-// NOT on pure pan/zoom. Lets us skip saves that wouldn't change anything.
 function signature(elements: readonly ElementLike[]): string {
   let v = 0;
   for (const el of elements) v += el.version ?? 0;
@@ -55,9 +48,6 @@ export function ExcalidrawEditor({ initialData, onSave }: Props) {
       const live = elements.filter((el) => !el.isDeleted);
       const sig = signature(live);
 
-      // Excalidraw fires onChange once on mount with the restored scene. Record
-      // that as the baseline and don't save it — so opening a drawing (including
-      // a legacy one whose elements Excalidraw can't restore) never clobbers it.
       if (!didInit.current) {
         didInit.current = true;
         lastSig.current = sig;
@@ -101,7 +91,7 @@ export function ExcalidrawEditor({ initialData, onSave }: Props) {
   );
 
   return (
-    <div className="h-full w-full">
+    <div className="absolute inset-0 h-full w-full">
       <Excalidraw
         theme={isDark ? "dark" : "light"}
         initialData={{

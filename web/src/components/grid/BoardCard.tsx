@@ -16,10 +16,6 @@ interface Props {
   onMove: () => void;
 }
 
-// A sub-board shown as a card in the grid (like a folder). It is both:
-//  - a drop target: dropping an item onto it moves the item into this board,
-//    and dropping another board onto it re-parents that board under this one;
-//  - a drag source: the whole card can be dragged onto another board.
 export function BoardCard({ board, onOpen, onDelete, onMove }: Props) {
   const { ref: dragRef, isDragging } = useDraggable({
     id: board.id,

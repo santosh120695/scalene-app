@@ -15,9 +15,10 @@ export interface NoteTemplate {
 // The task-list markup mirrors exactly what Tiptap's TaskList/TaskItem parse and
 // serialize (`<ul data-type="taskList">` / `<li data-type="taskItem"
 // data-checked="false">`), so the editor rehydrates it as a real checklist and
-// the backend can register each item as a todo on first save.
-const TODO_ITEM =
-  '<li data-type="taskItem" data-checked="false"><p data-placeholder="To-do item"></p></li>';
+// the backend can register each item as a todo on first save. Each item carries
+// its own placeholder hint so the empty checklist guides what to write.
+const todoItem = (hint: string) =>
+  `<li data-type="taskItem" data-checked="false"><p data-placeholder="${hint}"></p></li>`;
 
 export const NOTE_TEMPLATES: NoteTemplate[] = [
   {
@@ -25,12 +26,14 @@ export const NOTE_TEMPLATES: NoteTemplate[] = [
     name: "Standard",
     description: "A heading and a blank page to write on.",
     content:
-      '<h1 data-placeholder="Untitled"></h1><p data-placeholder="Start writing…"></p>',
+      '<h1 data-placeholder="Give your note a title…"></h1><p data-placeholder="Start writing — thoughts, ideas, anything…"></p>',
   },
   {
     id: "todos",
     name: "To-dos",
     description: "A heading and a checklist to tick off.",
-    content: `<h1 data-placeholder="Untitled"></h1><ul data-type="taskList">${TODO_ITEM}${TODO_ITEM}${TODO_ITEM}</ul>`,
+    content: `<h1 data-placeholder="Name your checklist…"></h1><ul data-type="taskList">${todoItem(
+      "What needs doing first?",
+    )}${todoItem("Add another task…")}${todoItem("And one more…")}</ul>`,
   },
 ];
