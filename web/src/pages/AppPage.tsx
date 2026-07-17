@@ -490,7 +490,7 @@ export function AppPage() {
         onOpenChange={setNewBoardOpen}
         parentId={newBoardParent}
         parentTitle={parentTitle}
-        onCreated={(id) => navigate(`/b/${id}`)}
+        onCreated={() => toast.success("Board created")}
       />
       <RenameBoardDialog
         board={renameTarget}
