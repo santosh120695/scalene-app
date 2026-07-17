@@ -1,0 +1,306 @@
+/* ─────────────────────────────────────────────────────────────────────
+   Note editor (TipTap) styles. Imported in main.tsx.
+
+   Covers the live editor content (.tiptap), the full-page note editor
+   (.note-doc), the shared task-list checkbox layout (also used by the
+   read-only preview surfaces — see note-preview.css), and the slash-command
+   / table popups.
+   ───────────────────────────────────────────────────────────────────── */
+
+/* TipTap editor content */
+.tiptap {
+  outline: none;
+  line-height: 1.7;
+}
+.tiptap p {
+  margin: 0 0 0.5em;
+  font-weight: 400;
+}
+.tiptap h1,
+.tiptap h2,
+.tiptap h3 {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0.6em 0 0.3em;
+}
+.tiptap h1 {
+  font-size: 40px;
+}
+.tiptap h2 {
+  font-size: 30px;
+}
+.tiptap h3 {
+  font-size: 20px;
+}
+
+/* Typography for the full-page note editor (scoped to .note-doc) */
+.note-doc .tiptap {
+  font-size: 16px;
+  line-height: 1.7;
+}
+.note-doc .tiptap h1 {
+  font-size: 40px;
+}
+.note-doc .tiptap h2 {
+  font-size: 30px;
+}
+.note-doc .tiptap h3 {
+  font-size: 20px;
+}
+.tiptap ul,
+.tiptap ol {
+  padding-left: 1.25em;
+  margin: 0 0 0.5em;
+}
+.tiptap ul {
+  list-style: disc;
+}
+.tiptap ol {
+  list-style: decimal;
+}
+/* Task-list checkboxes. The same rules apply to the live editor (.tiptap) and
+   to every read-only surface that renders saved note HTML: board note cards
+   (.note-preview), journal cards (.journal-preview), sub-notes (.prose-note),
+   and the detail reader (.reader). Without this, those containers' generic
+   `ul { list-style: disc }` rule turns each task into a bulleted list-item
+   with the checkbox stacked above its text instead of beside it. */
+.tiptap ul[data-type="taskList"],
+.note-preview ul[data-type="taskList"],
+.journal-preview ul[data-type="taskList"],
+.prose-note ul[data-type="taskList"],
+.reader ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+.tiptap ul[data-type="taskList"] li,
+.note-preview ul[data-type="taskList"] li,
+.journal-preview ul[data-type="taskList"] li,
+.prose-note ul[data-type="taskList"] li,
+.reader ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+.tiptap ul[data-type="taskList"] li > label,
+.note-preview ul[data-type="taskList"] li > label,
+.journal-preview ul[data-type="taskList"] li > label,
+.prose-note ul[data-type="taskList"] li > label,
+.reader ul[data-type="taskList"] li > label {
+  display: flex;
+  align-items: center;
+  /* Match the container's line-height (em-relative) so the checkbox centers on
+     the first line of text exactly. Each container sets --tasklist-line to its
+     own line-height; the editor/prose default of 1.7 is the fallback. */
+  min-height: var(--tasklist-line, 1.7em);
+  user-select: none;
+}
+.tiptap ul[data-type="taskList"] li > label input[type="checkbox"],
+.note-preview ul[data-type="taskList"] li > label input[type="checkbox"],
+.journal-preview ul[data-type="taskList"] li > label input[type="checkbox"],
+.prose-note ul[data-type="taskList"] li > label input[type="checkbox"],
+.reader ul[data-type="taskList"] li > label input[type="checkbox"] {
+  cursor: pointer;
+  margin: 0;
+}
+.tiptap ul[data-type="taskList"] li > div,
+.note-preview ul[data-type="taskList"] li > div,
+.journal-preview ul[data-type="taskList"] li > div,
+.prose-note ul[data-type="taskList"] li > div,
+.reader ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+.tiptap ul[data-type="taskList"] li > div > p,
+.note-preview ul[data-type="taskList"] li > div > p,
+.journal-preview ul[data-type="taskList"] li > div > p,
+.prose-note ul[data-type="taskList"] li > div > p,
+.reader ul[data-type="taskList"] li > div > p {
+  margin: 0;
+}
+.tiptap ul[data-type="taskList"] li[data-checked="true"] > div,
+.note-preview ul[data-type="taskList"] li[data-checked="true"] > div,
+.journal-preview ul[data-type="taskList"] li[data-checked="true"] > div,
+.prose-note ul[data-type="taskList"] li[data-checked="true"] > div,
+.reader ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+.tiptap code {
+  font-family: "Fira Code", monospace;
+  font-size: 0.875em;
+  background: var(--muted);
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+}
+.tiptap pre {
+  font-family: "Fira Code", monospace;
+  background: #1a1a18;
+  color: #f7f6f3;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0 0 0.5em;
+}
+.tiptap pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+.tiptap blockquote {
+  border-left: 3px solid var(--primary);
+  padding-left: 14px;
+  margin: 0 0 0.5em;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+.tiptap hr {
+  border: none;
+  border-top: 1px solid var(--border-default);
+  margin: 1em 0;
+}
+.tiptap table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.75em 0;
+  overflow: hidden;
+}
+.tiptap td,
+.tiptap th {
+  position: relative;
+  border: 1px solid var(--border-default);
+  padding: 6px 10px;
+  vertical-align: top;
+  text-align: left;
+}
+.tiptap th {
+  background: var(--muted);
+  font-weight: 600;
+}
+.tiptap td > *,
+.tiptap th > * {
+  margin-bottom: 0;
+}
+.tiptap .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.tiptap .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background: var(--primary);
+  pointer-events: none;
+}
+.tiptap.resize-cursor {
+  cursor: col-resize;
+}
+/* Inline images render through a resizable/movable NodeView (resizable-image.tsx). */
+.tiptap {
+  position: relative; /* anchor for the drop-position indicator */
+}
+.tiptap .ki-image {
+  margin: 0.75em 0;
+}
+.tiptap .ki-image-inner {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+}
+.tiptap .ki-image-inner img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  border-radius: 6px;
+}
+.tiptap .ki-image[data-selected="true"] .ki-image-inner img {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.tiptap .ki-image.is-moving .ki-image-inner {
+  opacity: 0.5;
+}
+/* Corner handle shown only while the image is selected. */
+.tiptap .ki-image-handle {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: var(--primary);
+  border: 2px solid var(--card, #fff);
+  border-radius: 3px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+/* Grip handle (top-left) for dragging the image up/down; shown on hover/select. */
+.tiptap .ki-image-move {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: grab;
+  touch-action: none;
+}
+.tiptap .ki-image:hover .ki-image-move,
+.tiptap .ki-image[data-selected="true"] .ki-image-move {
+  display: flex;
+}
+.tiptap .ki-image-move:active {
+  cursor: grabbing;
+}
+/* Insertion line shown while dragging an image to a new vertical position. */
+.tiptap .ki-image-drop-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 20;
+}
+/* Defensive fallback for any raw <img> not wrapped by the NodeView. */
+.tiptap img {
+  max-width: 100%;
+  height: auto;
+}
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--text-muted);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Slash-command / table popups: strip tippy's default dark theme — the menu
+   card inside provides its own surface, border, and shadow. */
+.tippy-box[data-theme~="kc-slash"],
+.tippy-box[data-theme~="kc-menu"] {
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+}
+.tippy-box[data-theme~="kc-slash"] .tippy-content,
+.tippy-box[data-theme~="kc-menu"] .tippy-content {
+  padding: 0;
+}
+.tippy-box[data-theme~="kc-slash"] .tippy-arrow,
+.tippy-box[data-theme~="kc-menu"] .tippy-arrow {
+  display: none;
+}
