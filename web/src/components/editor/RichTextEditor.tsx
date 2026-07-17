@@ -6,6 +6,7 @@ import {
 } from "@tiptap/react";
 // v3 moved the menu components out of the main entry and onto Floating UI.
 import { BubbleMenu } from "@tiptap/react/menus";
+import { Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 // TextStyle is the base <span style> mark; Color and FontFamily hang their
@@ -69,6 +70,33 @@ const TaskItemWithId = TaskItem.extend({
           attributes.todoId ? { "data-todo-id": attributes.todoId } : {},
       },
     };
+  },
+});
+
+// Lets a block carry its own placeholder hint via `data-placeholder`, which the
+// Placeholder extension below surfaces while the block is empty. Note templates
+// (see lib/noteTemplates) scaffold this attribute onto their heading/body/todo
+// blocks so a fresh templated note shows per-section ghost text. keepOnSplit is
+// off so pressing Enter starts a clean block instead of copying the hint down.
+const PlaceholderAttr = Extension.create({
+  name: "placeholderAttr",
+  addGlobalAttributes() {
+    return [
+      {
+        types: ["paragraph", "heading"],
+        attributes: {
+          placeholder: {
+            default: null,
+            keepOnSplit: false,
+            parseHTML: (el) => el.getAttribute("data-placeholder"),
+            renderHTML: (attrs) =>
+              attrs.placeholder
+                ? { "data-placeholder": attrs.placeholder }
+                : {},
+          },
+        },
+      },
+    ];
   },
 });
 
@@ -372,7 +400,18 @@ export function RichTextEditor({
         link: false,
         underline: false,
       }),
-      Placeholder.configure({ placeholder }),
+      PlaceholderAttr,
+      Placeholder.configure({
+        // Decorate every empty block (including nested todo paragraphs), not
+        // just the focused one, so a templated note shows all its hints at once.
+        includeChildren: true,
+        showOnlyCurrent: false,
+        // A block's own hint wins; otherwise only the whole-editor-empty prompt
+        // shows (returning "" leaves ordinary empty lines hint-free as before).
+        placeholder: ({ editor, node }) =>
+          (node.attrs.placeholder as string | null) ||
+          (editor.isEmpty ? placeholder : ""),
+      }),
       // Registered everywhere so per-line color/font content renders in every
       // editor (including the read-only-ish sub-note composer); the controls to
       // set them live in the full editor's drag-handle menu.

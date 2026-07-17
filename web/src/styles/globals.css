@@ -362,7 +362,11 @@ body {
   max-width: 100%;
   height: auto;
 }
-.tiptap p.is-editor-empty:first-child::before {
+/* Ghost text for empty blocks: the whole-editor-empty first paragraph, plus any
+   block carrying its own data-placeholder (note templates scaffold these onto
+   their heading/body/todo blocks). */
+.tiptap p.is-editor-empty:first-child::before,
+.tiptap .is-empty[data-placeholder]::before {
   content: attr(data-placeholder);
   float: left;
   color: var(--text-muted);
