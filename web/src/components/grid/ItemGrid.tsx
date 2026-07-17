@@ -21,6 +21,8 @@ interface Props {
   onTogglePin: (item: AnyItem) => void;
   onSetColor: (id: string, color: string) => void;
   onMoveToBoard: (item: AnyItem) => void;
+  onMoveItemToBoard: (itemId: string, boardId: string) => void;
+  onMoveBoardToBoard: (boardId: string, targetBoardId: string) => void;
   onReorder: (ids: string[]) => void;
   onAddLink: () => void;
   onUpload: () => void;
@@ -41,6 +43,8 @@ export function ItemGrid({
   onTogglePin,
   onSetColor,
   onMoveToBoard,
+  onMoveItemToBoard,
+  onMoveBoardToBoard,
   onReorder,
   onAddLink,
   onUpload,
@@ -84,6 +88,23 @@ export function ItemGrid({
 
   function handleDragEnd(event: DragEndEvent) {
     if (event.canceled) {
+      setOrder(null);
+      return;
+    }
+    const { source, target } = event.operation;
+    // Dropped onto a board card → move the dragged entity into that board
+    // instead of reordering. Let the query refetch drop it from this grid.
+    if (source && target?.type === "board" && source.id !== target.id) {
+      if (source.type === "board") {
+        onMoveBoardToBoard(String(source.id), String(target.id));
+      } else {
+        onMoveItemToBoard(String(source.id), String(target.id));
+      }
+      setOrder(null);
+      return;
+    }
+    // Boards aren't sortable — any other board drag is a no-op.
+    if (source?.type === "board") {
       setOrder(null);
       return;
     }
