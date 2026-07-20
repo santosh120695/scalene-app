@@ -318,12 +318,15 @@ func (h *Handler) CreateJournalItem(c *gin.Context) {
 
 	var item models.JournalItem
 	err := h.DB.Transaction(func(tx *gorm.DB) error {
-		// Idempotent day creation: the unique (user_id, date) constraint makes
-		// two rapid creates at rollover collapse to one day.
+		// Idempotent day creation: the partial unique index over live rows
+		// (uq_journal_days_user_date_live) makes two rapid creates at rollover
+		// collapse to one day, while still allowing a fresh day row for a date
+		// whose previous day was soft-deleted.
 		day := models.JournalDay{UserID: userID, Date: today}
 		if err := tx.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}, {Name: "date"}},
-			DoNothing: true,
+			Columns:     []clause.Column{{Name: "user_id"}, {Name: "date"}},
+			TargetWhere: clause.Where{Exprs: []clause.Expression{clause.Expr{SQL: "deleted_at IS NULL"}}},
+			DoNothing:   true,
 		}).Create(&day).Error; err != nil {
 			return err
 		}
@@ -453,7 +456,7 @@ func (h *Handler) ListJournalTags(c *gin.Context) {
 	var rows []tagCount
 	err := h.DB.Raw(`
 		SELECT tag, COUNT(*) AS count
-		FROM (SELECT unnest(tags) AS tag FROM journal_items WHERE user_id = ?) t
+		FROM (SELECT unnest(tags) AS tag FROM journal_items WHERE user_id = ? AND deleted_at IS NULL) t
 		GROUP BY tag
 		ORDER BY count DESC, tag ASC`, userID).Scan(&rows).Error
 	if err != nil {

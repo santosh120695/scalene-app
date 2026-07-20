@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"net/http"
-
 	"knowledgecanvas/internal/middleware"
 	"knowledgecanvas/internal/models"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 func (h *Handler) boardJSON(b *models.Board, itemCount int64) gin.H {
@@ -27,7 +27,6 @@ func (h *Handler) boardJSON(b *models.Board, itemCount int64) gin.H {
 	}
 }
 
-// GET /api/v1/boards
 func (h *Handler) ListBoards(c *gin.Context) {
 	userID := middleware.UserID(c)
 	var boards []models.Board
@@ -38,9 +37,9 @@ func (h *Handler) ListBoards(c *gin.Context) {
 
 	out := make([]gin.H, 0, len(boards))
 	for i := range boards {
-		var count int64
-		h.DB.Model(&models.CanvasItem{}).Where("board_id = ?", boards[i].ID).Count(&count)
-		out = append(out, h.boardJSON(&boards[i], count))
+		// var count int64
+		// h.DB.Model(&models.CanvasItem{}).Where("board_id = ?", boards[i].ID).Count(&count)
+		out = append(out, h.boardJSON(&boards[i], 0))
 	}
 	c.JSON(http.StatusOK, gin.H{"boards": out})
 }
@@ -52,13 +51,11 @@ type createBoardReq struct {
 	ParentID    *uuid.UUID `json:"parentId"`
 }
 
-// POST /api/v1/boards
 func (h *Handler) CreateBoard(c *gin.Context) {
 	userID := middleware.UserID(c)
 	var req createBoardReq
 	_ = c.ShouldBindJSON(&req)
 
-	// A sub-board's parent must belong to the same user.
 	if req.ParentID != nil {
 		if _, err := h.ownedBoard(*req.ParentID, userID); err != nil {
 			badRequest(c, "Parent board not found")
@@ -85,7 +82,6 @@ func (h *Handler) CreateBoard(c *gin.Context) {
 	c.JSON(http.StatusCreated, h.boardJSON(&board, 0))
 }
 
-// GET /api/v1/boards/:id — board + all items (mixed array).
 func (h *Handler) GetBoard(c *gin.Context) {
 	userID := middleware.UserID(c)
 	boardID, err := uuid.Parse(c.Param("id"))
@@ -101,7 +97,6 @@ func (h *Handler) GetBoard(c *gin.Context) {
 	}
 
 	var items []models.CanvasItem
-	// Pinned first, then by sort_order ascending (PRD §4.2).
 	if err := h.DB.Where("board_id = ?", boardID).
 		Order("is_pinned DESC, sort_order ASC").
 		Find(&items).Error; err != nil {
@@ -128,7 +123,6 @@ type updateBoardReq struct {
 	Tags        *[]string `json:"tags"`
 }
 
-// PUT /api/v1/boards/:id
 func (h *Handler) UpdateBoard(c *gin.Context) {
 	userID := middleware.UserID(c)
 	boardID, err := uuid.Parse(c.Param("id"))
@@ -175,12 +169,7 @@ type moveBoardReq struct {
 	ParentID *uuid.UUID `json:"parentId"`
 }
 
-// selfOrDescendant reports whether candidateID is rootID itself or nested
-// anywhere under it, by walking the user's whole board tree in memory.
-func (h *Handler) selfOrDescendant(userID, rootID, candidateID uuid.UUID) bool {
-	if rootID == candidateID {
-		return true
-	}
+func (h *Handler) descendantBoardIDs(userID, rootID uuid.UUID) []uuid.UUID {
 	var boards []models.Board
 	h.DB.Select("id", "parent_id").Where("user_id = ?", userID).Find(&boards)
 	ids := map[uuid.UUID]bool{rootID: true}
@@ -193,11 +182,22 @@ func (h *Handler) selfOrDescendant(userID, rootID, candidateID uuid.UUID) bool {
 			}
 		}
 	}
-	return ids[candidateID]
+	out := make([]uuid.UUID, 0, len(ids))
+	for id := range ids {
+		out = append(out, id)
+	}
+	return out
 }
 
-// PATCH /api/v1/boards/:id/parent — move a board under a new parent, or to
-// the top level when parentId is null.
+func (h *Handler) selfOrDescendant(userID, rootID, candidateID uuid.UUID) bool {
+	for _, id := range h.descendantBoardIDs(userID, rootID) {
+		if id == candidateID {
+			return true
+		}
+	}
+	return false
+}
+
 func (h *Handler) MoveBoard(c *gin.Context) {
 	userID := middleware.UserID(c)
 	boardID, err := uuid.Parse(c.Param("id"))
@@ -238,7 +238,6 @@ func (h *Handler) MoveBoard(c *gin.Context) {
 	c.JSON(http.StatusOK, h.boardJSON(board, count))
 }
 
-// PUT /api/v1/boards/:id/state — persist sort/filter prefs.
 func (h *Handler) UpdateBoardState(c *gin.Context) {
 	userID := middleware.UserID(c)
 	boardID, err := uuid.Parse(c.Param("id"))
@@ -264,7 +263,6 @@ func (h *Handler) UpdateBoardState(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-// DELETE /api/v1/boards/:id
 func (h *Handler) DeleteBoard(c *gin.Context) {
 	userID := middleware.UserID(c)
 	boardID, err := uuid.Parse(c.Param("id"))
@@ -272,11 +270,32 @@ func (h *Handler) DeleteBoard(c *gin.Context) {
 		badRequest(c, "Invalid board id")
 		return
 	}
-	if _, err := h.ownedBoard(boardID, userID); err != nil {
+	if _, err = h.ownedBoard(boardID, userID); err != nil {
 		notFound(c, "Board not found")
 		return
 	}
-	if err := h.DB.Delete(&models.Board{}, "id = ?", boardID).Error; err != nil {
+
+	boardIDs := h.descendantBoardIDs(userID, boardID)
+	err = h.DB.Transaction(func(tx *gorm.DB) error {
+		var itemIDs []uuid.UUID
+		if err = tx.Model(&models.CanvasItem{}).Where("board_id IN ?", boardIDs).
+			Pluck("id", &itemIDs).Error; err != nil {
+			return err
+		}
+		if len(itemIDs) > 0 {
+			if err = tx.Where("item_id IN ?", itemIDs).Delete(&models.SubNote{}).Error; err != nil {
+				return err
+			}
+		}
+		if err = tx.Where("board_id IN ?", boardIDs).Delete(&models.Todo{}).Error; err != nil {
+			return err
+		}
+		if err = tx.Where("board_id IN ?", boardIDs).Delete(&models.CanvasItem{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("id IN ?", boardIDs).Delete(&models.Board{}).Error
+	})
+	if err != nil {
 		serverError(c, err)
 		return
 	}

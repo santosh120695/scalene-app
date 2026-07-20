@@ -1,12 +1,11 @@
 package handlers
 
 import (
-	"net/http"
-	"strings"
-
 	"knowledgecanvas/internal/auth"
 	"knowledgecanvas/internal/middleware"
 	"knowledgecanvas/internal/models"
+	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -27,10 +26,10 @@ func (h *Handler) userJSON(u *models.User) gin.H {
 	return gin.H{"id": u.ID, "email": u.Email, "fullName": u.FullName, "avatarUrl": u.AvatarURL}
 }
 
-// POST /api/v1/auth/register
 func (h *Handler) Register(c *gin.Context) {
 	var req registerReq
 	if err := c.ShouldBindJSON(&req); err != nil {
+		// wrong error message
 		badRequest(c, "Email and a password of at least 6 characters are required")
 		return
 	}
@@ -48,13 +47,14 @@ func (h *Handler) Register(c *gin.Context) {
 		serverError(c, err)
 		return
 	}
+
 	user := models.User{Email: req.Email, PasswordHash: hash, FullName: req.FullName}
-	if err := h.DB.Create(&user).Error; err != nil {
+	if err = h.DB.Create(&user).Error; err != nil {
 		serverError(c, err)
 		return
 	}
 
-	token, err := auth.GenerateToken(h.Cfg.JWTSecret, user.ID, user.Email)
+	token, err := auth.GenerateToken(h.Cfg.JWTSecret, user.ID)
 	if err != nil {
 		serverError(c, err)
 		return
@@ -62,7 +62,6 @@ func (h *Handler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"access_token": token, "user": h.userJSON(&user)})
 }
 
-// POST /api/v1/auth/login
 func (h *Handler) Login(c *gin.Context) {
 	var req loginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -81,7 +80,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := auth.GenerateToken(h.Cfg.JWTSecret, user.ID, user.Email)
+	token, err := auth.GenerateToken(h.Cfg.JWTSecret, user.ID)
 	if err != nil {
 		serverError(c, err)
 		return
@@ -89,12 +88,10 @@ func (h *Handler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"access_token": token, "user": h.userJSON(&user)})
 }
 
-// POST /api/v1/auth/logout — stateless JWT, client just drops the token.
 func (h *Handler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-// GET /api/v1/auth/me
 func (h *Handler) Me(c *gin.Context) {
 	userID := middleware.UserID(c)
 	var user models.User

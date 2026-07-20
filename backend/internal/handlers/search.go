@@ -44,7 +44,7 @@ SELECT ci.id AS item_id, ci.board_id, b.title AS board_title, ci.item_type AS ca
 FROM canvas_items ci
 JOIN boards b ON b.id = ci.board_id
 JOIN note_items n ON n.id = ci.id
-WHERE ci.user_id = ?` + boardClause + `
+WHERE ci.user_id = ? AND ci.deleted_at IS NULL` + boardClause + `
   AND to_tsvector('english', COALESCE(n.title,'') || ' ' || COALESCE(n.content,'')) @@ plainto_tsquery('english', ?)
 
 UNION ALL
@@ -54,7 +54,7 @@ SELECT ci.id, ci.board_id, b.title, ci.item_type,
 FROM canvas_items ci
 JOIN boards b ON b.id = ci.board_id
 JOIN link_items l ON l.id = ci.id
-WHERE ci.user_id = ?` + boardClause + `
+WHERE ci.user_id = ? AND ci.deleted_at IS NULL` + boardClause + `
   AND to_tsvector('english', COALESCE(l.title,'') || ' ' || COALESCE(l.description,'')) @@ plainto_tsquery('english', ?)
 
 UNION ALL
@@ -64,7 +64,7 @@ SELECT ci.id, ci.board_id, b.title, ci.item_type,
 FROM canvas_items ci
 JOIN boards b ON b.id = ci.board_id
 JOIN pdf_items p ON p.id = ci.id
-WHERE ci.user_id = ?` + boardClause + `
+WHERE ci.user_id = ? AND ci.deleted_at IS NULL` + boardClause + `
   AND to_tsvector('english', COALESCE(p.title,'')) @@ plainto_tsquery('english', ?)
 
 UNION ALL
@@ -74,7 +74,7 @@ SELECT ci.id, ci.board_id, b.title, ci.item_type,
 FROM canvas_items ci
 JOIN boards b ON b.id = ci.board_id
 JOIN image_items im ON im.id = ci.id
-WHERE ci.user_id = ?` + boardClause + `
+WHERE ci.user_id = ? AND ci.deleted_at IS NULL` + boardClause + `
   AND to_tsvector('english', COALESCE(im.caption,'')) @@ plainto_tsquery('english', ?)
 
 LIMIT 50`

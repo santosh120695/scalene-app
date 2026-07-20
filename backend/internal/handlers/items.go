@@ -174,7 +174,8 @@ func (h *Handler) MoveItem(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "boardId": req.BoardID})
 }
 
-// DELETE /api/v1/items/:id — cascades to the child table; cleans up files.
+// DELETE /api/v1/items/:id — soft-deletes the item and its sub-notes/todos.
+// Stored files are kept so the item remains recoverable.
 func (h *Handler) DeleteItem(c *gin.Context) {
 	userID := middleware.UserID(c)
 	itemID, err := uuid.Parse(c.Param("id"))
@@ -188,24 +189,16 @@ func (h *Handler) DeleteItem(c *gin.Context) {
 		return
 	}
 
-	// Best-effort delete of any stored files before removing the DB rows.
-	ctx := c.Request.Context()
-	switch ci.ItemType {
-	case "pdf":
-		var p models.PdfItem
-		if h.DB.First(&p, "id = ?", ci.ID).Error == nil {
-			_ = h.Storage.Delete(ctx, p.FilePath)
-			_ = h.Storage.Delete(ctx, p.ThumbnailURL)
+	err = h.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("item_id = ?", ci.ID).Delete(&models.SubNote{}).Error; err != nil {
+			return err
 		}
-	case "image":
-		var im models.ImageItem
-		if h.DB.First(&im, "id = ?", ci.ID).Error == nil {
-			_ = h.Storage.Delete(ctx, im.FilePath)
-			_ = h.Storage.Delete(ctx, im.ThumbnailURL)
+		if err := tx.Where("item_id = ?", ci.ID).Delete(&models.Todo{}).Error; err != nil {
+			return err
 		}
-	}
-
-	if err := h.DB.Delete(&models.CanvasItem{}, "id = ?", ci.ID).Error; err != nil {
+		return tx.Delete(&models.CanvasItem{}, "id = ?", ci.ID).Error
+	})
+	if err != nil {
 		serverError(c, err)
 		return
 	}

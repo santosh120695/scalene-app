@@ -10,7 +10,6 @@ import {
   StickyNote,
   Sun,
   Trash2,
-  Folder,
   FolderInput,
 } from "lucide-react";
 import type { Board, User } from "@/types";
@@ -86,7 +85,6 @@ function ExpandedSidebar({
 
   return (
     <aside className="flex h-full w-[90vw] shrink-0 flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--sidebar)] lg:w-[270px]">
-      {/* Header: logo + collapse button — h-12 to match the content header. */}
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--border)] px-3">
         <div className="flex items-center gap-2">
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-brand text-[13px] font-semibold text-primary-foreground">
@@ -121,7 +119,6 @@ function ExpandedSidebar({
         />
       </div>
 
-      {/* Boards nav header: label + sort + new-board — New Board lives here now */}
       <div className="mt-5 flex items-center justify-between px-3 pt-3 pb-1">
         <span className="font-semibold text-ink-muted">Boards</span>
         <div className="flex items-center gap-1">
@@ -146,8 +143,7 @@ function ExpandedSidebar({
         </div>
       </div>
 
-      {/* Scrollable board list (top-level only) */}
-      <nav className="scroll-thin flex-1 overflow-y-auto pb-3 mt-1">
+      <nav className="scroll-thin min-h-0 flex-1 overflow-y-auto pb-3 mt-1">
         {roots.map((board) => (
           <BoardRow
             key={board.id}
@@ -163,7 +159,6 @@ function ExpandedSidebar({
         )}
       </nav>
 
-      {/* Bottom: user info + logout */}
       <div className="flex items-center gap-2.5 border-t border-[var(--border)] p-3">
         <Avatar className="h-8 w-8">
           <AvatarFallback>{initial}</AvatarFallback>
@@ -172,7 +167,6 @@ function ExpandedSidebar({
           <p className="truncate text-[13px] font-medium text-ink-primary">
             {user?.fullName || "Account"}
           </p>
-          <p className="truncate text-[11px] text-ink-muted">{user?.email}</p>
         </div>
         <button
           onClick={toggleTheme}
@@ -226,7 +220,7 @@ function BoardRow({
             onClick={onSelect}
             className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
           >
-            <Folder size={15} strokeWidth={1.5} className="shrink-0" />
+            {/*<Folder size={15} strokeWidth={1.5} className="shrink-0" />*/}
             <span className="flex-1 truncate font-medium first-letter:uppercase">
               {board.title}
             </span>
@@ -242,10 +236,6 @@ function BoardRow({
           >
             <Trash2 size={13} strokeWidth={1.5} />
           </button>
-          {/*<span className="shrink-0 text-[11px] text-ink-muted">
-            {board.itemCount ?? 0}
-            //{" "}
-          </span>*/}
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
@@ -263,7 +253,6 @@ function BoardRow({
   );
 }
 
-// Slim icon rail shown when the sidebar is collapsed.
 function CollapsedRail({
   user,
   activeTodos,
@@ -344,7 +333,6 @@ function RailButton({
   );
 }
 
-// Shared ghost-style sidebar row (used by Note/Link/Upload, New Board, Todos).
 function SidebarItem({
   icon: Icon,
   label,
