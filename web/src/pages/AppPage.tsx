@@ -212,6 +212,52 @@ export function AppPage() {
     );
   }
 
+  // Drag-and-drop: an item dropped onto a board card moves into that board.
+  function handleDropOnBoard(itemId: string, targetBoardId: string) {
+    const item = items.find((i) => i.id === itemId);
+    if (!item || item.boardId === targetBoardId) return;
+    const originBoardId = item.boardId;
+    move.mutate(
+      { id: itemId, boardId: targetBoardId },
+      {
+        onSuccess: () => {
+          toast.success("Moved to board", {
+            action: {
+              label: "Undo",
+              onClick: () =>
+                move.mutate({ id: itemId, boardId: originBoardId }),
+            },
+          });
+        },
+        onError: (e) => toast.error(errMessage(e, "Could not move item")),
+      },
+    );
+  }
+
+  // Drag-and-drop: a board dropped onto another board card is re-parented
+  // under it. Guards against no-ops and cycles (dropping onto a descendant).
+  function handleDropBoardOnBoard(boardId: string, targetBoardId: string) {
+    const b = boards.find((x) => x.id === boardId);
+    if (!b || b.parentId === targetBoardId) return;
+    if (descendantIds(boardId).has(targetBoardId)) return;
+    const originParentId = b.parentId ?? null;
+    moveBoard.mutate(
+      { id: boardId, parentId: targetBoardId },
+      {
+        onSuccess: () => {
+          toast.success("Board moved", {
+            action: {
+              label: "Undo",
+              onClick: () =>
+                moveBoard.mutate({ id: boardId, parentId: originParentId }),
+            },
+          });
+        },
+        onError: (e) => toast.error(errMessage(e, "Could not move board")),
+      },
+    );
+  }
+
   function handleMoveBoard(newParentId: string | null) {
     if (!moveBoardTarget) return;
     const { id, parentId: originParentId } = moveBoardTarget;
@@ -414,6 +460,8 @@ export function AppPage() {
                 }
                 onSetColor={(id, c) => color.mutate({ id, colorLabel: c })}
                 onMoveToBoard={(item) => setMoveTarget(item)}
+                onMoveItemToBoard={handleDropOnBoard}
+                onMoveBoardToBoard={handleDropBoardOnBoard}
                 onReorder={(ids) => reorder.mutate(ids)}
                 onAddLink={() => {
                   setSplitWith(null);
@@ -442,7 +490,7 @@ export function AppPage() {
         onOpenChange={setNewBoardOpen}
         parentId={newBoardParent}
         parentTitle={parentTitle}
-        onCreated={(id) => navigate(`/b/${id}`)}
+        onCreated={() => toast.success("Board created")}
       />
       <RenameBoardDialog
         board={renameTarget}

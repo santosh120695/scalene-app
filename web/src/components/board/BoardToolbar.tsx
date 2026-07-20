@@ -20,7 +20,7 @@ export function BoardToolbar({
   onRename,
 }: Props) {
   return (
-    <div className="sticky top-0 h-12 z-10 flex items-center justify-between gap-3 border-b border-[var(--border)] bg-card px-6 py-3">
+    <div className="sticky top-0 h-12 z-10 flex items-center justify-between gap-3 bg-card px-6 py-3">
       <BreadCrumb
         breadcrumbs={breadcrumbs}
         onNavigate={onNavigate}

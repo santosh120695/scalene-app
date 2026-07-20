@@ -1,4 +1,11 @@
-import { FileText, ImageOff, LinkIcon, PenTool } from "lucide-react";
+import {
+  FileText,
+  ImageOff,
+  Instagram,
+  LinkIcon,
+  PenTool,
+  Play,
+} from "lucide-react";
 import type {
   AnyItem,
   ExcalidrawItem,
@@ -8,6 +15,7 @@ import type {
   PdfItem,
 } from "@/types";
 import { sanitizeHtml } from "@/lib/utils";
+import { detectEmbed } from "@/lib/embeds";
 
 // Renders the content area of a card based on the item's discriminated type.
 export function ItemBody({ item }: { item: AnyItem }) {
@@ -44,13 +52,15 @@ function NoteBody({ item }: { item: NoteItem }) {
 }
 
 function LinkBody({ item }: { item: LinkItem }) {
+  const embed = detectEmbed(item.url);
+  const previewSrc = item.thumbnailUrl || embed?.thumbnailUrl;
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <div className="relative h-[240px] w-full shrink-0 bg-surface-sunken">
-        {item.thumbnailUrl ? (
+        {previewSrc ? (
           // eslint-disable-next-line jsx-a11y/img-redundant-alt
           <img
-            src={item.thumbnailUrl}
+            src={previewSrc}
             alt={item.title || "Link preview"}
             loading="lazy"
             className="h-full w-full object-cover"
@@ -60,7 +70,18 @@ function LinkBody({ item }: { item: LinkItem }) {
           />
         ) : (
           <div className="flex h-full items-center justify-center text-ink-muted">
-            <LinkIcon size={20} strokeWidth={1.5} />
+            {embed?.provider === "instagram" ? (
+              <Instagram size={20} strokeWidth={1.5} />
+            ) : (
+              <LinkIcon size={20} strokeWidth={1.5} />
+            )}
+          </div>
+        )}
+        {embed?.provider === "youtube" && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/70 text-white shadow-md">
+              <Play size={22} strokeWidth={1.5} className="translate-x-[1px] fill-white" />
+            </span>
           </div>
         )}
       </div>

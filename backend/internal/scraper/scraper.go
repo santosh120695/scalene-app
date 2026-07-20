@@ -15,24 +15,26 @@ import (
 	readability "github.com/go-shiori/go-readability"
 )
 
-// Meta holds the metadata + extracted readable article for a URL.
 type Meta struct {
 	Title       string
 	Description string
 	Thumbnail   string
 	Domain      string
-	Content     string // readable article HTML (Pocket-style reader view)
-	Byline      string // author, when available
+	Content     string
+	Byline      string
 }
 
 const maxBody = 5 * 1024 * 1024 // 5MB
 
-// Scrape fetches a page once and extracts OpenGraph metadata plus the main
-// readable article content. It never returns an error — on failure it returns
-// Meta with at least the domain populated.
 func Scrape(rawURL string) Meta {
 	meta := Meta{Domain: domainOf(rawURL)}
 	parsedURL, _ := url.Parse(rawURL)
+
+	provider := embedProvider(parsedURL)
+	if provider == "instagram" {
+		meta.Title = "Instagram"
+		return meta
+	}
 
 	body, ok := fetch(rawURL)
 	if !ok {
@@ -56,6 +58,14 @@ func Scrape(rawURL string) Meta {
 			attr(doc, `meta[property="og:image"]`),
 			attr(doc, `meta[name="twitter:image"]`),
 		))
+	}
+
+	// Embeddable providers (YouTube): stop after OG metadata — no reader view.
+	if provider != "" {
+		if meta.Title == "" {
+			meta.Title = meta.Domain
+		}
+		return meta
 	}
 
 	// ── Readable article body via go-readability (Readability.js port) ──
@@ -87,20 +97,14 @@ func Scrape(rawURL string) Meta {
 	return meta
 }
 
-// Real-browser User-Agent. Many sites (notably Medium) serve a stripped-down
-// shell or a login wall to unknown bots / datacenter IPs, so we present as a
-// recent desktop Chrome to get the full article HTML.
 const browserUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
 	"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
-// fetch GETs the page with a browser-like request and returns the body.
 func fetch(rawURL string) ([]byte, bool) {
 	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
 	if err != nil {
 		return nil, false
 	}
-	// Mimic a real browser request — UA alone is often not enough; some sites
-	// gate on Accept / Accept-Language too.
 	req.Header.Set("User-Agent", browserUA)
 	req.Header.Set("Accept",
 		"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
@@ -110,8 +114,6 @@ func fetch(rawURL string) ([]byte, bool) {
 	req.Header.Set("Sec-Fetch-Site", "none")
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
 
-	// Follow redirects but carry the browser headers onto each hop (Go drops
-	// custom headers across redirects by default).
 	client := &http.Client{
 		Timeout: 12 * time.Second,
 		CheckRedirect: func(r *http.Request, via []*http.Request) error {
@@ -152,6 +154,20 @@ func firstNonEmpty(vals ...string) string {
 	return ""
 }
 
+func embedProvider(u *url.URL) string {
+	if u == nil {
+		return ""
+	}
+	host := strings.TrimPrefix(strings.ToLower(u.Hostname()), "www.")
+	switch host {
+	case "youtube.com", "m.youtube.com", "youtu.be", "youtube-nocookie.com":
+		return "youtube"
+	case "instagram.com", "instagr.am":
+		return "instagram"
+	}
+	return ""
+}
+
 func domainOf(raw string) string {
 	u, err := url.Parse(raw)
 	if err != nil {
@@ -175,18 +191,17 @@ func absURL(base, ref string) string {
 	return b.ResolveReference(r).String()
 }
 
-var nextDataRe = regexp.MustCompile(`(?s)<script id="__NEXT_DATA__"[^>]*>(.*?)</script>`)
-var tagRe = regexp.MustCompile(`<[^>]+>`)
+var (
+	nextDataRe = regexp.MustCompile(`(?s)<script id="__NEXT_DATA__"[^>]*>(.*?)</script>`)
+	tagRe      = regexp.MustCompile(`<[^>]+>`)
+)
 
-// JSON keys that commonly hold a rendered article body across Next.js sites.
-// Tier 1 is the cleanest pre-rendered HTML (HackerNoon uses "parsed"); tier 2
-// is a looser fallback. Either tier wins over plain-text "articlebody"/"body".
-var contentKeysTier1 = map[string]bool{"parsed": true, "contenthtml": true, "bodyhtml": true}
-var contentKeysTier2 = map[string]bool{"content": true, "body": true, "html": true, "markup": true}
-var contentKeysText = map[string]bool{"articlebody": true, "content": true, "body": true}
+var (
+	contentKeysTier1 = map[string]bool{"parsed": true, "contenthtml": true, "bodyhtml": true}
+	contentKeysTier2 = map[string]bool{"content": true, "body": true, "html": true, "markup": true}
+	contentKeysText  = map[string]bool{"articlebody": true, "content": true, "body": true}
+)
 
-// nextDataContent extracts the longest article-like body from a page's embedded
-// __NEXT_DATA__ JSON (the data a Next.js SPA renders client-side). Returns "".
 func nextDataContent(htmlBytes []byte) string {
 	m := nextDataRe.FindSubmatch(htmlBytes)
 	if m == nil {
@@ -204,8 +219,6 @@ func nextDataContent(htmlBytes []byte) string {
 		case map[string]interface{}:
 			for k, child := range v {
 				lk := strings.ToLower(k)
-				// Don't descend into related/recommended/comment subtrees —
-				// their bodies would otherwise win on length.
 				childSkip := skip ||
 					strings.Contains(lk, "related") ||
 					strings.Contains(lk, "recommend") ||
@@ -246,7 +259,6 @@ func nextDataContent(htmlBytes []byte) string {
 	return ""
 }
 
-// textToHTML wraps blank-line-separated plain text in <p> tags.
 func textToHTML(s string) string {
 	var b strings.Builder
 	for _, para := range strings.Split(s, "\n\n") {
@@ -260,7 +272,6 @@ func textToHTML(s string) string {
 	return b.String()
 }
 
-// textLen returns the length of the visible text in an HTML fragment.
 func textLen(htmlStr string) int {
 	return len(strings.TrimSpace(tagRe.ReplaceAllString(htmlStr, " ")))
 }
