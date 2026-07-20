@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(h *handlers.Handler, cfg *config.Config) *gin.Engine {
+func Init(h *handlers.Handler, cfg *config.Config) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 	r.MaxMultipartMemory = 51 << 20
@@ -64,7 +64,6 @@ func SetupRouter(h *handlers.Handler, cfg *config.Config) *gin.Engine {
 		auth.PATCH("/boards/:id/reorder", h.ReorderItems)
 		auth.PATCH("/boards/:id/parent", h.MoveBoard)
 
-		// Items (shared) — all param routes use :id to satisfy Gin's router.
 		auth.GET("/items/:id", h.GetItem)
 		auth.PATCH("/items/:id/pin", h.PinItem)
 		auth.PATCH("/items/:id/color", h.ColorItem)
@@ -73,8 +72,6 @@ func SetupRouter(h *handlers.Handler, cfg *config.Config) *gin.Engine {
 		auth.GET("/items/:id/sub-notes", h.ListSubNotes)
 		auth.POST("/items/:id/sub-notes", h.CreateSubNote)
 
-		// Type-specific item routes — top-level resources (Gin cannot mix the
-		// static "/items/notes" with the param "/items/:id"; see README).
 		auth.POST("/notes", h.CreateNote)
 		auth.PUT("/notes/:id", h.UpdateNote)
 		auth.POST("/links", h.CreateLink)
@@ -87,20 +84,16 @@ func SetupRouter(h *handlers.Handler, cfg *config.Config) *gin.Engine {
 		auth.POST("/excalidraws", h.CreateExcalidraw)
 		auth.PUT("/excalidraws/:id", h.UpdateExcalidraw)
 
-		// Sub-notes
 		auth.PUT("/sub-notes/:id", h.UpdateSubNote)
 		auth.DELETE("/sub-notes/:id", h.DeleteSubNote)
 
-		// Search
 		auth.GET("/search", h.Search)
 
-		// Todos — checklist items aggregated across all note items.
 		auth.GET("/todos", h.ListTodos)
 		auth.POST("/todos", h.CreateQuickTodo)
 		auth.PATCH("/todos/:id", h.ToggleTodo)
 		auth.DELETE("/todos/:id", h.DeleteTodo)
 
-		// Journal — daily entries: days hold items scaffolded from templates.
 		journal := auth.Group("/journal")
 		{
 			journal.GET("/templates", h.ListJournalTemplates)

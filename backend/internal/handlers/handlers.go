@@ -2,18 +2,16 @@ package handlers
 
 import (
 	"context"
-	"net/http"
-
 	"knowledgecanvas/config"
 	"knowledgecanvas/internal/models"
 	"knowledgecanvas/internal/storage"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-// Handler bundles dependencies shared across all route handlers.
 type Handler struct {
 	DB      *gorm.DB
 	Cfg     *config.Config
@@ -24,8 +22,6 @@ func New(db *gorm.DB, cfg *config.Config, st storage.Storage) *Handler {
 	return &Handler{DB: db, Cfg: cfg, Storage: st}
 }
 
-// ---- response helpers -------------------------------------------------------
-
 func fail(c *gin.Context, status int, code, message string) {
 	c.JSON(status, gin.H{"error": code, "message": message})
 }
@@ -34,9 +30,11 @@ func badRequest(c *gin.Context, message string) {
 	fail(c, http.StatusBadRequest, "bad_request", message)
 }
 func notFound(c *gin.Context, message string) { fail(c, http.StatusNotFound, "not_found", message) }
+
 func forbidden(c *gin.Context) {
 	fail(c, http.StatusForbidden, "forbidden", "You do not have access to this resource")
 }
+
 func serverError(c *gin.Context, err error) {
 	fail(c, http.StatusInternalServerError, "server_error", err.Error())
 }
@@ -67,8 +65,6 @@ func (h *Handler) ownedItem(itemID, userID uuid.UUID) (*models.CanvasItem, error
 	return &ci, nil
 }
 
-// ---- item DTO assembly ------------------------------------------------------
-
 // sign turns a storage key into a presigned URL (empty key -> empty string).
 func (h *Handler) sign(ctx context.Context, key string, ttl int) string {
 	if key == "" {
@@ -81,8 +77,6 @@ func (h *Handler) sign(ctx context.Context, key string, ttl int) string {
 	return url
 }
 
-// itemMap builds the JSON shape for one item, merging base + type fields and
-// resolving storage keys to presigned URLs.
 func (h *Handler) itemMap(ctx context.Context, ci models.CanvasItem) gin.H {
 	base := gin.H{
 		"id":         ci.ID,
@@ -145,7 +139,6 @@ func (h *Handler) itemMap(ctx context.Context, ci models.CanvasItem) gin.H {
 	return base
 }
 
-// nextSortOrder returns max(sort_order)+1 for a board (new items append).
 func (h *Handler) nextSortOrder(tx *gorm.DB, boardID uuid.UUID) int {
 	var max *int
 	tx.Model(&models.CanvasItem{}).

@@ -36,11 +36,10 @@ func CheckPassword(hash, plain string) bool {
 }
 
 // GenerateToken issues a signed HMAC-SHA256 access token.
-func GenerateToken(secret string, userID uuid.UUID, email string) (string, error) {
+func GenerateToken(secret string, userID uuid.UUID) (string, error) {
 	now := time.Now()
 	claims := Claims{
 		UserID: userID,
-		Email:  email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID.String(),
 			IssuedAt:  jwt.NewNumericDate(now),
