@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // User — account holder.
@@ -19,31 +20,33 @@ type User struct {
 
 // Board — a Pinterest-style board owned by a user.
 type Board struct {
-	ID          uuid.UUID   `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	UserID      uuid.UUID   `gorm:"type:uuid;index;not null" json:"userId"`
-	ParentID    *uuid.UUID  `gorm:"type:uuid;index" json:"parentId,omitempty"`
-	Title       string      `gorm:"type:varchar(255);not null;default:'Untitled Board'" json:"title"`
-	Description string      `gorm:"type:text" json:"description,omitempty"`
-	CoverURL    string      `gorm:"type:text" json:"coverUrl,omitempty"`
-	IsPublic    bool        `gorm:"default:false" json:"isPublic"`
-	BoardState  JSONB       `gorm:"type:jsonb;default:'{}'" json:"boardState"`
-	Tags        StringArray `gorm:"type:text[];default:'{}'" json:"tags"`
-	CreatedAt   time.Time   `json:"createdAt"`
-	UpdatedAt   time.Time   `json:"updatedAt"`
+	ID          uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID      uuid.UUID      `gorm:"type:uuid;index;not null" json:"userId"`
+	ParentID    *uuid.UUID     `gorm:"type:uuid;index" json:"parentId,omitempty"`
+	Title       string         `gorm:"type:varchar(255);not null;default:'Untitled Board'" json:"title"`
+	Description string         `gorm:"type:text" json:"description,omitempty"`
+	CoverURL    string         `gorm:"type:text" json:"coverUrl,omitempty"`
+	IsPublic    bool           `gorm:"default:false" json:"isPublic"`
+	BoardState  JSONB          `gorm:"type:jsonb;default:'{}'" json:"boardState"`
+	Tags        StringArray    `gorm:"type:text[];default:'{}'" json:"tags"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	UpdatedAt   time.Time      `json:"updatedAt"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // CanvasItem — shared grid metadata for all item types. Each concrete item type
 // has its own child table that shares this primary key 1-to-1 via foreign key.
 type CanvasItem struct {
-	ID         uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	BoardID    uuid.UUID `gorm:"type:uuid;index;not null" json:"boardId"`
-	UserID     uuid.UUID `gorm:"type:uuid;index;not null" json:"userId"`
-	ItemType   string    `gorm:"type:varchar(50);index;not null" json:"itemType"` // pdf | link | note | image | excalidraw
-	SortOrder  int       `gorm:"not null;default:0" json:"sortOrder"`
-	ColorLabel string    `gorm:"type:varchar(50)" json:"colorLabel,omitempty"`
-	IsPinned   bool      `gorm:"default:false" json:"isPinned"`
-	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
+	ID         uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	BoardID    uuid.UUID      `gorm:"type:uuid;index;not null" json:"boardId"`
+	UserID     uuid.UUID      `gorm:"type:uuid;index;not null" json:"userId"`
+	ItemType   string         `gorm:"type:varchar(50);index;not null" json:"itemType"` // pdf | link | note | image | excalidraw
+	SortOrder  int            `gorm:"not null;default:0" json:"sortOrder"`
+	ColorLabel string         `gorm:"type:varchar(50)" json:"colorLabel,omitempty"`
+	IsPinned   bool           `gorm:"default:false" json:"isPinned"`
+	CreatedAt  time.Time      `json:"createdAt"`
+	UpdatedAt  time.Time      `json:"updatedAt"`
+	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // PdfItem — shares PK with CanvasItem.
@@ -113,39 +116,42 @@ type EditorImage struct {
 // handlers.syncTodosFromContent) or a standalone quick-added todo with no
 // backing note/board. ItemID/BoardID are only set for the former.
 type Todo struct {
-	ID          uuid.UUID     `gorm:"type:uuid;primaryKey" json:"id"`
-	ItemID      uuid.NullUUID `gorm:"type:uuid;index" json:"itemId"`
-	BoardID     uuid.NullUUID `gorm:"type:uuid;index" json:"boardId"`
-	UserID      uuid.UUID     `gorm:"type:uuid;index;not null" json:"userId"`
-	Text        string        `gorm:"type:text;not null;default:''" json:"text"`
-	IsCompleted bool          `gorm:"not null;default:false" json:"isCompleted"`
-	Position    int           `gorm:"not null;default:0" json:"position"`
-	CreatedAt   time.Time     `json:"createdAt"`
-	UpdatedAt   time.Time     `json:"updatedAt"`
+	ID          uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
+	ItemID      uuid.NullUUID  `gorm:"type:uuid;index" json:"itemId"`
+	BoardID     uuid.NullUUID  `gorm:"type:uuid;index" json:"boardId"`
+	UserID      uuid.UUID      `gorm:"type:uuid;index;not null" json:"userId"`
+	Text        string         `gorm:"type:text;not null;default:''" json:"text"`
+	IsCompleted bool           `gorm:"not null;default:false" json:"isCompleted"`
+	Position    int            `gorm:"not null;default:0" json:"position"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	UpdatedAt   time.Time      `json:"updatedAt"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // SubNote — an annotation attached to any canvas item.
 type SubNote struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	ItemID    uuid.UUID `gorm:"type:uuid;index;not null" json:"itemId"`
-	UserID    uuid.UUID `gorm:"type:uuid;not null" json:"userId"`
-	Content   string    `gorm:"type:text;not null" json:"content"`
-	Highlight string    `gorm:"type:text" json:"highlight,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID        uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	ItemID    uuid.UUID      `gorm:"type:uuid;index;not null" json:"itemId"`
+	UserID    uuid.UUID      `gorm:"type:uuid;not null" json:"userId"`
+	Content   string         `gorm:"type:text;not null" json:"content"`
+	Highlight string         `gorm:"type:text" json:"highlight,omitempty"`
+	CreatedAt time.Time      `json:"createdAt"`
+	UpdatedAt time.Time      `json:"updatedAt"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // JournalDay — a single calendar day (in the user's timezone) that contains one
 // or more journal items. item_count and total_words are server-maintained
 // aggregates recalculated whenever an item is created, edited, or deleted.
 type JournalDay struct {
-	ID         uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	UserID     uuid.UUID `gorm:"type:uuid;index;not null" json:"userId"`
-	Date       time.Time `gorm:"type:date;not null" json:"date"`
-	ItemCount  int       `gorm:"not null;default:0" json:"itemCount"`
-	TotalWords int       `gorm:"not null;default:0" json:"totalWords"`
-	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
+	ID         uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID     uuid.UUID      `gorm:"type:uuid;index;not null" json:"userId"`
+	Date       time.Time      `gorm:"type:date;not null" json:"date"`
+	ItemCount  int            `gorm:"not null;default:0" json:"itemCount"`
+	TotalWords int            `gorm:"not null;default:0" json:"totalWords"`
+	CreatedAt  time.Time      `json:"createdAt"`
+	UpdatedAt  time.Time      `json:"updatedAt"`
+	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // JournalItem — one entry within a day. Content is Tiptap HTML. StyleConfig is a
@@ -153,17 +159,18 @@ type JournalDay struct {
 // at creation and thereafter edited independently (changing prefs never
 // restyles existing items).
 type JournalItem struct {
-	ID           uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	JournalDayID uuid.UUID  `gorm:"type:uuid;index;not null" json:"journalDayId"`
-	UserID       uuid.UUID  `gorm:"type:uuid;index;not null" json:"userId"`
-	Title        string     `gorm:"type:varchar(500);not null;default:''" json:"title"`
-	Content      string     `gorm:"type:text;not null;default:''" json:"content"` // Tiptap HTML
-	StyleConfig  JSONB       `gorm:"type:jsonb;not null;default:'{}'" json:"styleConfig"`
-	Tags         StringArray `gorm:"type:text[];not null;default:'{}'" json:"tags"`
-	SortOrder    int         `gorm:"not null;default:0" json:"sortOrder"`
-	CreatedAt    time.Time   `json:"createdAt"`
-	UpdatedAt    time.Time   `json:"updatedAt"`
-	JournalDay   JournalDay  `json:"journalDay"`
+	ID           uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	JournalDayID uuid.UUID      `gorm:"type:uuid;index;not null" json:"journalDayId"`
+	UserID       uuid.UUID      `gorm:"type:uuid;index;not null" json:"userId"`
+	Title        string         `gorm:"type:varchar(500);not null;default:''" json:"title"`
+	Content      string         `gorm:"type:text;not null;default:''" json:"content"` // Tiptap HTML
+	StyleConfig  JSONB          `gorm:"type:jsonb;not null;default:'{}'" json:"styleConfig"`
+	Tags         StringArray    `gorm:"type:text[];not null;default:'{}'" json:"tags"`
+	SortOrder    int            `gorm:"not null;default:0" json:"sortOrder"`
+	CreatedAt    time.Time      `json:"createdAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+	JournalDay   JournalDay     `json:"journalDay"`
 }
 
 // JournalTemplate — an ordered set of sections that scaffolds a new item's

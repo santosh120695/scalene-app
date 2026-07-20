@@ -150,9 +150,11 @@ func (h *Handler) syncTodosFromContent(tx *gorm.DB, itemID, boardID, userID uuid
 			Position:    it.Position,
 			UpdatedAt:   now,
 		}
+		// deleted_at is reset to NULL so a checklist item restored in the
+		// editor (e.g. via undo) resurrects its soft-deleted todo row.
 		if err := tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "id"}},
-			DoUpdates: clause.AssignmentColumns([]string{"text", "is_completed", "position", "updated_at"}),
+			DoUpdates: clause.AssignmentColumns([]string{"text", "is_completed", "position", "updated_at", "deleted_at"}),
 		}).Create(&todo).Error; err != nil {
 			return content, err
 		}
@@ -195,7 +197,7 @@ SELECT t.id, t.item_id, t.board_id, COALESCE(b.title,'') AS board_title, COALESC
 FROM todos t
 LEFT JOIN boards b ON b.id = t.board_id
 LEFT JOIN note_items n ON n.id = t.item_id
-WHERE t.user_id = ?`
+WHERE t.user_id = ? AND t.deleted_at IS NULL`
 	args := []interface{}{userID}
 
 	if completed := c.Query("completed"); completed != "" {

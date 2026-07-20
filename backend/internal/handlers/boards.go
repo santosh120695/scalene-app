@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 func (h *Handler) boardJSON(b *models.Board, itemCount int64) gin.H {
@@ -175,12 +176,9 @@ type moveBoardReq struct {
 	ParentID *uuid.UUID `json:"parentId"`
 }
 
-// selfOrDescendant reports whether candidateID is rootID itself or nested
-// anywhere under it, by walking the user's whole board tree in memory.
-func (h *Handler) selfOrDescendant(userID, rootID, candidateID uuid.UUID) bool {
-	if rootID == candidateID {
-		return true
-	}
+// descendantBoardIDs returns rootID plus the id of every board nested under
+// it, by walking the user's whole board tree in memory.
+func (h *Handler) descendantBoardIDs(userID, rootID uuid.UUID) []uuid.UUID {
 	var boards []models.Board
 	h.DB.Select("id", "parent_id").Where("user_id = ?", userID).Find(&boards)
 	ids := map[uuid.UUID]bool{rootID: true}
@@ -193,7 +191,22 @@ func (h *Handler) selfOrDescendant(userID, rootID, candidateID uuid.UUID) bool {
 			}
 		}
 	}
-	return ids[candidateID]
+	out := make([]uuid.UUID, 0, len(ids))
+	for id := range ids {
+		out = append(out, id)
+	}
+	return out
+}
+
+// selfOrDescendant reports whether candidateID is rootID itself or nested
+// anywhere under it.
+func (h *Handler) selfOrDescendant(userID, rootID, candidateID uuid.UUID) bool {
+	for _, id := range h.descendantBoardIDs(userID, rootID) {
+		if id == candidateID {
+			return true
+		}
+	}
+	return false
 }
 
 // PATCH /api/v1/boards/:id/parent — move a board under a new parent, or to
@@ -276,7 +289,30 @@ func (h *Handler) DeleteBoard(c *gin.Context) {
 		notFound(c, "Board not found")
 		return
 	}
-	if err := h.DB.Delete(&models.Board{}, "id = ?", boardID).Error; err != nil {
+	// Soft delete the whole subtree: DB ON DELETE CASCADE doesn't fire on the
+	// soft-delete UPDATE, so nested boards, items, sub-notes, and todos are
+	// stamped explicitly.
+	boardIDs := h.descendantBoardIDs(userID, boardID)
+	err = h.DB.Transaction(func(tx *gorm.DB) error {
+		var itemIDs []uuid.UUID
+		if err := tx.Model(&models.CanvasItem{}).Where("board_id IN ?", boardIDs).
+			Pluck("id", &itemIDs).Error; err != nil {
+			return err
+		}
+		if len(itemIDs) > 0 {
+			if err := tx.Where("item_id IN ?", itemIDs).Delete(&models.SubNote{}).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("board_id IN ?", boardIDs).Delete(&models.Todo{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("board_id IN ?", boardIDs).Delete(&models.CanvasItem{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("id IN ?", boardIDs).Delete(&models.Board{}).Error
+	})
+	if err != nil {
 		serverError(c, err)
 		return
 	}
