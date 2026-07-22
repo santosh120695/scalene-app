@@ -24,8 +24,6 @@ export function JournalItemPreview({
   const contentFont = fontClass(style.fontKey ?? DEFAULT_FONT_KEY);
   const backdrop = resolveBackdrop(style)
   const { style: bdStyle, isImage } = backdropStyle(backdrop)
-  console.log(isImage)
-  console.log(style)
 
   return (
     <div
@@ -39,23 +37,25 @@ export function JournalItemPreview({
           onClick();
         }
       }}
+      // Fixed 3/4 aspect ratio to match the canvas item cards (GridItem).
+      style={{ width: "100%", aspectRatio: "3 / 4" }}
       className={cn(
-        "group cursor-pointer overflow-hidden rounded-xl border border-[var(--border)] shadow-panel transition-colors",
-        "hover:border-brand/50 focus-visible:border-brand h-full overflow-hidden",
+        "group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-[var(--border)] shadow-panel transition-colors",
+        "hover:border-brand/50 focus-visible:border-brand",
         contentFont
       )}
     >
       {isImage ?
-        <div style={bdStyle} className="w-full h-20"></div>
+        <div style={bdStyle} className="h-20 w-full shrink-0"></div>
         :
-        <div style={{ background: style.backdrop?.value || "#1e3a5f"}} className="w-full h-20"></div>
+        <div style={{ background: style.backdrop?.value || "#1e3a5f"}} className="h-20 w-full shrink-0"></div>
       }
       <div
          dangerouslySetInnerHTML={{
            __html: sanitizeHtml(item.content)
         }}
         className={cn(
-           "journal-preview p-4"
+           "journal-preview min-h-0 flex-1 overflow-hidden"
          )}
        />
       </div>
