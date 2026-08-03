@@ -22,28 +22,21 @@ type Config struct {
 	OCIBucketName      string
 	OCIRegion          string
 
-	// CORS — comma-separated list of allowed frontend origins.
 	AllowedOrigins string
 
-	// StorageDriver: "oracle" or "local" (filesystem fallback, default).
 	StorageDriver string
-	LocalStorage  string // directory used when StorageDriver == "local"
+	LocalStorage  string
 
-	// PublicBaseURL — used to build file URLs for the local storage driver.
 	PublicBaseURL string
 }
 
-// Load reads .env (if present) and returns a populated Config.
 func Load() *Config {
-	// .env is optional — in production env vars are injected directly.
 	if err := godotenv.Load(); err != nil {
 		log.Println("config: no .env file found, relying on environment variables")
 	}
 
 	environment := env("ENVIRONMENT", "development")
 
-	// Default storage driver: oracle in production, local in development.
-	// Can always be overridden explicitly via STORAGE_DRIVER.
 	defaultDriver := "local"
 	if environment == "production" {
 		defaultDriver = "oracle"

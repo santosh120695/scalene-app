@@ -79,15 +79,16 @@ func (h *Handler) sign(ctx context.Context, key string, ttl int) string {
 
 func (h *Handler) itemMap(ctx context.Context, ci models.CanvasItem) gin.H {
 	base := gin.H{
-		"id":         ci.ID,
-		"boardId":    ci.BoardID,
-		"userId":     ci.UserID,
-		"itemType":   ci.ItemType,
-		"sortOrder":  ci.SortOrder,
-		"colorLabel": ci.ColorLabel,
-		"isPinned":   ci.IsPinned,
-		"createdAt":  ci.CreatedAt,
-		"updatedAt":  ci.UpdatedAt,
+		"id":           ci.ID,
+		"boardId":      ci.BoardID,
+		"userId":       ci.UserID,
+		"parentItemId": ci.ParentItemID, // nil for every top-level item
+		"itemType":     ci.ItemType,
+		"sortOrder":    ci.SortOrder,
+		"colorLabel":   ci.ColorLabel,
+		"isPinned":     ci.IsPinned,
+		"createdAt":    ci.CreatedAt,
+		"updatedAt":    ci.UpdatedAt,
 	}
 
 	switch ci.ItemType {

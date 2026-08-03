@@ -86,9 +86,13 @@ export function useMoveItem(boardId: string) {
   return useMutation({
     mutationFn: (vars: { id: string; boardId: string }) =>
       itemsApi.moveItem(vars.id, vars.boardId),
-    onSuccess: (_data, vars) => {
+    onSuccess: (data, vars) => {
       invalidateSource();
       qc.invalidateQueries({ queryKey: boardKeys.detail(vars.boardId) });
+      // Moving un-nests a sub-note, so its former parent's list is now stale.
+      if (data?.unnestedFrom) {
+        qc.invalidateQueries({ queryKey: ["item", data.unnestedFrom] });
+      }
     },
   });
 }

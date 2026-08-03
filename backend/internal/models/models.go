@@ -33,16 +33,19 @@ type Board struct {
 }
 
 type CanvasItem struct {
-	ID         uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	BoardID    uuid.UUID      `gorm:"type:uuid;index;not null" json:"boardId"`
-	UserID     uuid.UUID      `gorm:"type:uuid;index;not null" json:"userId"`
-	ItemType   string         `gorm:"type:varchar(50);index;not null" json:"itemType"` // pdf | link | note | image | excalidraw
-	SortOrder  int            `gorm:"not null;default:0" json:"sortOrder"`
-	ColorLabel string         `gorm:"type:varchar(50)" json:"colorLabel,omitempty"`
-	IsPinned   bool           `gorm:"default:false" json:"isPinned"`
-	CreatedAt  time.Time      `json:"createdAt"`
-	UpdatedAt  time.Time      `json:"updatedAt"`
-	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
+	ID      uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	BoardID uuid.UUID `gorm:"type:uuid;index;not null" json:"boardId"`
+	UserID  uuid.UUID `gorm:"type:uuid;index;not null" json:"userId"`
+	// Set when this item is a sub-note nested inside another note. A child
+	// always shares its parent's board — see CreateNote. Mirrors Board.ParentID.
+	ParentItemID *uuid.UUID     `gorm:"type:uuid;index" json:"parentItemId,omitempty"`
+	ItemType     string         `gorm:"type:varchar(50);index;not null" json:"itemType"` // pdf | link | note | image | excalidraw
+	SortOrder    int            `gorm:"not null;default:0" json:"sortOrder"`
+	ColorLabel   string         `gorm:"type:varchar(50)" json:"colorLabel,omitempty"`
+	IsPinned     bool           `gorm:"default:false" json:"isPinned"`
+	CreatedAt    time.Time      `json:"createdAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 type PdfItem struct {
@@ -111,15 +114,23 @@ type Todo struct {
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
-type SubNote struct {
-	ID        uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	ItemID    uuid.UUID      `gorm:"type:uuid;index;not null" json:"itemId"`
-	UserID    uuid.UUID      `gorm:"type:uuid;not null" json:"userId"`
-	Content   string         `gorm:"type:text;not null" json:"content"`
-	Highlight string         `gorm:"type:text" json:"highlight,omitempty"`
-	CreatedAt time.Time      `json:"createdAt"`
-	UpdatedAt time.Time      `json:"updatedAt"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+// Comment is a remark anchored to a highlighted passage of a note. AnchorID is
+// minted by the editor and mirrored into the note HTML as
+// <mark data-comment-id="…">; every comment sharing an anchor is one flat
+// thread, whose first row (IsThreadRoot) owns QuotedText and the resolve state.
+type Comment struct {
+	ID           uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	ItemID       uuid.UUID      `gorm:"type:uuid;index;not null" json:"itemId"`
+	AnchorID     uuid.UUID      `gorm:"type:uuid;index;not null" json:"anchorId"`
+	IsThreadRoot bool           `gorm:"not null;default:false" json:"isThreadRoot"`
+	QuotedText   string         `gorm:"type:text;not null;default:''" json:"quotedText"`
+	UserID       uuid.UUID      `gorm:"type:uuid;index;not null" json:"userId"`
+	Content      string         `gorm:"type:text;not null" json:"content"`
+	ResolvedAt   *time.Time     `json:"resolvedAt"`
+	ResolvedBy   *uuid.UUID     `gorm:"type:uuid" json:"resolvedBy"`
+	CreatedAt    time.Time      `json:"createdAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 type JournalDay struct {
@@ -174,7 +185,7 @@ func (LinkItem) TableName() string       { return "link_items" }
 func (NoteItem) TableName() string       { return "note_items" }
 func (ImageItem) TableName() string      { return "image_items" }
 func (ExcalidrawItem) TableName() string { return "excalidraw_items" }
-func (SubNote) TableName() string        { return "sub_notes" }
+func (Comment) TableName() string        { return "comments" }
 func (Todo) TableName() string           { return "todos" }
 func (EditorImage) TableName() string    { return "editor_images" }
 

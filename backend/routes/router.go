@@ -69,8 +69,8 @@ func Init(h *handlers.Handler, cfg *config.Config) *gin.Engine {
 		auth.PATCH("/items/:id/color", h.ColorItem)
 		auth.PATCH("/items/:id/board", h.MoveItem)
 		auth.DELETE("/items/:id", h.DeleteItem)
-		auth.GET("/items/:id/sub-notes", h.ListSubNotes)
-		auth.POST("/items/:id/sub-notes", h.CreateSubNote)
+		auth.GET("/items/:id/comments", h.ListComments)
+		auth.POST("/items/:id/comments", h.CreateComment)
 
 		auth.POST("/notes", h.CreateNote)
 		auth.PUT("/notes/:id", h.UpdateNote)
@@ -84,8 +84,9 @@ func Init(h *handlers.Handler, cfg *config.Config) *gin.Engine {
 		auth.POST("/excalidraws", h.CreateExcalidraw)
 		auth.PUT("/excalidraws/:id", h.UpdateExcalidraw)
 
-		auth.PUT("/sub-notes/:id", h.UpdateSubNote)
-		auth.DELETE("/sub-notes/:id", h.DeleteSubNote)
+		auth.PATCH("/comments/:id", h.UpdateComment)
+		auth.DELETE("/comments/:id", h.DeleteComment)
+		auth.PATCH("/comments/:id/resolve", h.ResolveComment)
 
 		auth.GET("/search", h.Search)
 
