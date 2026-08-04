@@ -21,6 +21,7 @@ import { commentPluginKey } from "@/components/editor/comment-mark";
 import { UNTITLED_NOTE } from "@/components/editor/note-link";
 import { CommentsDrawer, type PendingThread } from "@/components/detail/CommentsDrawer";
 import { SubNoteDialog } from "@/components/detail/SubNoteDialog";
+import { WordCount } from "@/components/detail/WordCount";
 import type { PickedItem } from "@/components/detail/ItemTreePicker";
 import { toast } from "@/components/ui/sonner";
 import { errMessage } from "@/api/client";
@@ -58,6 +59,7 @@ export function NoteWithComments({
   const contentRef = useRef(content);
   const dirty = useRef(false);
   const editorRef = useRef<Editor | null>(null);
+  const [editor, setEditor] = useState<Editor | null>(null);
   const editorPaneRef = useRef<HTMLDivElement>(null);
 
   const [pending, setPending] = useState<PendingThread | null>(null);
@@ -160,8 +162,11 @@ export function NoteWithComments({
     [onCommentsOpenChange, openThread]
   );
 
-  const handleEditorReady = useCallback((editor: Editor | null) => {
-    editorRef.current = editor;
+  // The ref is what the imperative handlers below read; the state is only so
+  // the word counter can subscribe to the editor once it exists.
+  const handleEditorReady = useCallback((next: Editor | null) => {
+    editorRef.current = next;
+    setEditor(next);
   }, []);
 
   const openSubNote = useCallback(
@@ -343,26 +348,32 @@ export function NoteWithComments({
 
   return (
     <div className="flex min-h-0 flex-1">
-      <div ref={editorPaneRef} className="scroll-thin min-h-0 flex-1 overflow-y-auto">
-        <div className="note-doc mx-auto w-full max-w-[1000px] px-1 py-8 sm:px-12">
-          <RichTextEditor
-            value={content}
-            onChange={(html) => {
-              contentRef.current = html;
-              setContent(html);
-              dirty.current = true;
-              onStatus("");
-            }}
-            onBlur={() => void save()}
-            onEditorReady={handleEditorReady}
-            comments={commentsWiring}
-            noteLinks={noteLinkWiring}
-            placeholder="Type '/' for commands, or just start writing…"
-            minHeight={600}
-            className="bg-card"
-            bare
-          />
+      {/* Positioning context for the word counter: it sits outside the scroll
+          container so it stays pinned to the pane instead of scrolling away
+          with the text. */}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div ref={editorPaneRef} className="scroll-thin min-h-0 flex-1 overflow-y-auto">
+          <div className="note-doc mx-auto w-full max-w-[1000px] px-1 py-8 sm:px-12">
+            <RichTextEditor
+              value={content}
+              onChange={(html) => {
+                contentRef.current = html;
+                setContent(html);
+                dirty.current = true;
+                onStatus("");
+              }}
+              onBlur={() => void save()}
+              onEditorReady={handleEditorReady}
+              comments={commentsWiring}
+              noteLinks={noteLinkWiring}
+              placeholder="Type '/' for commands, or just start writing…"
+              minHeight={600}
+              className="bg-card"
+              bare
+            />
+          </div>
         </div>
+        {editor && <WordCount editor={editor} />}
       </div>
 
       <CommentsDrawer
