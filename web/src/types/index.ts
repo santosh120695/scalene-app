@@ -34,12 +34,17 @@ export interface CanvasItemBase {
   id: string;
   boardId: string;
   userId: string;
+  // Set when this item is a sub-note nested inside another note. Items with a
+  // parent are excluded from the board grid — they're reached via the parent.
+  parentItemId?: string | null;
   itemType: ItemType;
   sortOrder: number;
   colorLabel?: string;
   isPinned: boolean;
   createdAt: string;
   updatedAt: string;
+  // Only present on notes in a board listing.
+  subNoteCount?: number;
 }
 
 export interface PdfItem extends CanvasItemBase {
@@ -62,10 +67,22 @@ export interface LinkItem extends CanvasItemBase {
   byline?: string;
 }
 
+// A note nested inside another, as listed on its parent's detail view.
+export interface SubNoteRef {
+  id: string;
+  title: string;
+  itemType: ItemType;
+  updatedAt: string;
+}
+
 export interface NoteItem extends CanvasItemBase {
   itemType: "note";
   title?: string;
   content?: string;
+  // Both only come from GET /items/:id, never from a board listing.
+  subNotes?: SubNoteRef[];
+  // Ancestors, root-most first, for the breadcrumb on a nested note.
+  parentChain?: { id: string; title: string }[];
 }
 
 export interface ImageItem extends CanvasItemBase {
@@ -88,16 +105,40 @@ export interface ExcalidrawItem extends CanvasItemBase {
 
 export type AnyItem = PdfItem | LinkItem | NoteItem | ImageItem | ExcalidrawItem;
 
-export interface SubNote {
+// A remark anchored to a highlighted passage of a note. anchorId is minted by
+// the editor and mirrored into the note HTML as <mark data-comment-id="…">;
+// every comment sharing an anchor is one flat thread, whose first comment
+// (isThreadRoot) owns the quoted passage and the resolve state.
+//
+// Named NoteComment, not Comment: `Comment` is a lib.dom global, and an exported
+// interface with that name silently shadows it in every importing file.
+export interface NoteComment {
   id: string;
   itemId: string;
+  anchorId: string;
+  isThreadRoot: boolean;
+  quotedText: string;
   userId: string;
   content: string;
-  highlight?: string;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
   authorName?: string;
   authorEmail?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Client-side grouping only — never returned by the API, because thread order
+// comes from the note's document order, which only the editor knows.
+export interface CommentThreadGroup {
+  anchorId: string;
+  quotedText: string;
+  root: NoteComment;
+  replies: NoteComment[];
+  resolvedAt: string | null;
+  // The anchor no longer appears in the note HTML (the highlighted text was
+  // deleted), so this thread has nothing left to point at.
+  detached: boolean;
 }
 
 export interface SearchResult {
@@ -107,6 +148,10 @@ export interface SearchResult {
   cardType: ItemType;
   title: string;
   snippet: string;
+  // Set when the hit is a sub-note. Those are hidden from the board grid, so
+  // search is a main route to them and the parent's name is the useful context.
+  parentItemId?: string | null;
+  parentTitle?: string;
 }
 
 // ---- Journal (daily entries) ----

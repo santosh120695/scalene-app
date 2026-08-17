@@ -17,11 +17,13 @@ import (
 
 type createNoteReq struct {
 	BoardID uuid.UUID `json:"boardId" binding:"required"`
-	Title   string    `json:"title"`
-	Content string    `json:"content"`
+	// When set, the new note is a sub-note nested inside this one.
+	ParentItemID *uuid.UUID `json:"parentItemId"`
+	Title        string     `json:"title"`
+	Content      string     `json:"content"`
 }
 
-// POST /api/v1/items/notes
+// POST /api/v1/notes
 func (h *Handler) CreateNote(c *gin.Context) {
 	userID := middleware.UserID(c)
 	var req createNoteReq
@@ -34,19 +36,49 @@ func (h *Handler) CreateNote(c *gin.Context) {
 		return
 	}
 
+	// A sub-note ALWAYS lands on its parent's board, so boardId is advisory once
+	// parentItemId is set. That invariant is what keeps DeleteBoard correct
+	// without changes (it deletes by board_id IN, so a subtree can never be
+	// stranded on a board that isn't being deleted) and what lets the split view
+	// carry one boardId in the route for both panes.
+	boardID := req.BoardID
+	if req.ParentItemID != nil {
+		parent, err := h.ownedItem(*req.ParentItemID, userID)
+		if err != nil {
+			notFound(c, "Parent note not found")
+			return
+		}
+		if parent.ItemType != "note" {
+			badRequest(c, "Only a note can contain sub-notes")
+			return
+		}
+		boardID = parent.BoardID
+	}
+
 	var ci models.CanvasItem
 	err := h.DB.Transaction(func(tx *gorm.DB) error {
+		// No self-parent check needed: this row's id isn't minted until Create
+		// below, and parent_item_id is never rewritten afterwards, so a cycle
+		// cannot form.
 		ci = models.CanvasItem{
-			BoardID:   req.BoardID,
-			UserID:    userID,
-			ItemType:  "note",
-			SortOrder: h.nextSortOrder(tx, req.BoardID),
+			BoardID:      boardID,
+			UserID:       userID,
+			ParentItemID: req.ParentItemID,
+			ItemType:     "note",
+		}
+		if req.ParentItemID != nil {
+			ci.SortOrder = h.nextChildSortOrder(tx, *req.ParentItemID)
+		} else {
+			ci.SortOrder = h.nextSortOrder(tx, boardID)
 		}
 		if err := tx.Create(&ci).Error; err != nil {
 			return err
 		}
 		content, err := h.syncTodosFromContent(tx, ci.ID, ci.BoardID, userID, req.Content)
 		if err != nil {
+			return err
+		}
+		if content, err = h.syncNoteLinks(tx, userID, content); err != nil {
 			return err
 		}
 		note := models.NoteItem{ID: ci.ID, Title: req.Title, Content: content}
@@ -84,6 +116,14 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 	}
 
 	err = h.DB.Transaction(func(tx *gorm.DB) error {
+		// A note's title is derived from its first block, so it changes often.
+		// Compare against what's stored so the link refresh below only runs on a
+		// real rename, not on every blur-save.
+		var before models.NoteItem
+		if err := tx.Select("title").First(&before, "id = ?", itemID).Error; err != nil {
+			return err
+		}
+
 		updates := map[string]interface{}{}
 		if req.Title != nil {
 			updates["title"] = *req.Title
@@ -93,6 +133,9 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 			if err != nil {
 				return err
 			}
+			if content, err = h.syncNoteLinks(tx, userID, content); err != nil {
+				return err
+			}
 			updates["content"] = content
 		}
 		if len(updates) > 0 {
@@ -100,6 +143,13 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 				return err
 			}
 			tx.Model(&models.CanvasItem{}).Where("id = ?", itemID).Update("updated_at", gorm.Expr("NOW()"))
+		}
+
+		// Must come after the update above so the rewrite reads the new title.
+		if req.Title != nil && *req.Title != before.Title {
+			if err := h.refreshLinksTo(tx, userID, itemID); err != nil {
+				return err
+			}
 		}
 		return nil
 	})

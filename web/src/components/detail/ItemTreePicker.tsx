@@ -15,9 +15,20 @@ import { useSearch } from "@/hooks/useSearch";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
+// Metadata the caller usually already has on screen, passed through so a
+// consumer that needs a label (e.g. a note-link chip) doesn't have to re-fetch
+// the item just to name it.
+export interface PickedItem {
+  title: string;
+  boardId: string;
+  itemType: ItemType;
+}
+
 interface Props {
   boards: Board[];
-  onSelectItem: (itemId: string) => void;
+  onSelectItem: (itemId: string, meta?: PickedItem) => void;
+  // Hide an item that would be nonsensical to pick (e.g. the note you're in).
+  excludeItemId?: string;
 }
 
 const ICONS: Record<ItemType, typeof FileText> = {
@@ -31,7 +42,7 @@ const ICONS: Record<ItemType, typeof FileText> = {
 function itemTitle(item: AnyItem): string {
   switch (item.itemType) {
     case "note":
-      return item.title || "Note";
+      return item.title || "Untitled note";
     case "link":
       return item.title || item.domain || "Link";
     case "image":
@@ -89,13 +100,15 @@ function BoardNode({
   expanded,
   onToggle,
   onSelectItem,
+  excludeItemId,
 }: {
   board: Board;
   depth: number;
   childrenByParent: Map<string | null, Board[]>;
   expanded: Set<string>;
   onToggle: (id: string) => void;
-  onSelectItem: (itemId: string) => void;
+  onSelectItem: (itemId: string, meta?: PickedItem) => void;
+  excludeItemId?: string;
 }) {
   const kids = childrenByParent.get(board.id) ?? [];
   const hasItems = (board.itemCount ?? 0) > 0;
@@ -140,15 +153,23 @@ function BoardNode({
               Loading…
             </p>
           )}
-          {items.map((item) => (
-            <ItemRow
-              key={item.id}
-              depth={depth + 1}
-              icon={ICONS[item.itemType]}
-              title={itemTitle(item)}
-              onClick={() => onSelectItem(item.id)}
-            />
-          ))}
+          {items
+            .filter((item) => item.id !== excludeItemId)
+            .map((item) => (
+              <ItemRow
+                key={item.id}
+                depth={depth + 1}
+                icon={ICONS[item.itemType]}
+                title={itemTitle(item)}
+                onClick={() =>
+                  onSelectItem(item.id, {
+                    title: itemTitle(item),
+                    boardId: item.boardId,
+                    itemType: item.itemType,
+                  })
+                }
+              />
+            ))}
           {kids.map((k) => (
             <BoardNode
               key={k.id}
@@ -158,6 +179,7 @@ function BoardNode({
               expanded={expanded}
               onToggle={onToggle}
               onSelectItem={onSelectItem}
+              excludeItemId={excludeItemId}
             />
           ))}
         </>
@@ -169,7 +191,7 @@ function BoardNode({
 // Tree-with-search picker for choosing any item across every board — used by
 // the split-view browser. Defaults to a collapsed board tree (mirroring
 // BoardTreePicker); typing switches to a flat cross-board item search.
-export function ItemTreePicker({ boards, onSelectItem }: Props) {
+export function ItemTreePicker({ boards, onSelectItem, excludeItemId }: Props) {
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -218,16 +240,26 @@ export function ItemTreePicker({ boards, onSelectItem }: Props) {
           ) : (searchQuery.data ?? []).length === 0 ? (
             <p className="py-8 text-center text-[13px] text-ink-muted">No matching items.</p>
           ) : (
-            (searchQuery.data ?? []).map((r) => (
-              <ItemRow
-                key={r.itemId}
-                depth={0}
-                icon={ICONS[r.cardType]}
-                title={r.title || "Untitled"}
-                subtitle={r.boardTitle}
-                onClick={() => onSelectItem(r.itemId)}
-              />
-            ))
+            (searchQuery.data ?? [])
+              .filter((r) => r.itemId !== excludeItemId)
+              .map((r) => (
+                <ItemRow
+                  key={r.itemId}
+                  depth={0}
+                  icon={ICONS[r.cardType]}
+                  title={r.title || "Untitled note"}
+                  // A sub-note's parent says more about where it lives than its
+                  // board does, since it never appears on that board's grid.
+                  subtitle={r.parentTitle ? `in ${r.parentTitle}` : r.boardTitle}
+                  onClick={() =>
+                    onSelectItem(r.itemId, {
+                      title: r.title || "Untitled",
+                      boardId: r.boardId,
+                      itemType: r.cardType,
+                    })
+                  }
+                />
+              ))
           )
         ) : roots.length === 0 ? (
           <p className="py-8 text-center text-[13px] text-ink-muted">No boards yet.</p>
@@ -241,6 +273,7 @@ export function ItemTreePicker({ boards, onSelectItem }: Props) {
               expanded={expanded}
               onToggle={toggle}
               onSelectItem={onSelectItem}
+              excludeItemId={excludeItemId}
             />
           ))
         )}

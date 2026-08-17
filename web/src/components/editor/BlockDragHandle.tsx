@@ -48,7 +48,7 @@ const COLOR_OPTIONS: { label: string; value: string | null }[] = [
 // A Notion-style drag handle that appears to the left of the hovered block. Drag
 // it to reorder blocks; click it for a context menu of block actions: change the
 // line's font or text color, duplicate, clear formatting, or delete. Only
-// mounted on the full editor (not the compact sub-note composer).
+// mounted on the full editor (not the compact composer).
 export function BlockDragHandle({ editor }: { editor: Editor }) {
   // The block currently under the handle, tracked from the plugin so the menu
   // acts on the right node even though the handle floats outside the doc.

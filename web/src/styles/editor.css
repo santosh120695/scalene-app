@@ -61,7 +61,7 @@
 }
 /* Task-list checkboxes. The same rules apply to the live editor (.tiptap) and
    to every read-only surface that renders saved note HTML: board note cards
-   (.note-preview), journal cards (.journal-preview), sub-notes (.prose-note),
+   (.note-preview), journal cards (.journal-preview), prose blocks (.prose-note),
    and the detail reader (.reader). Without this, those containers' generic
    `ul { list-style: disc }` rule turns each task into a bulleted list-item
    with the checkbox stacked above its text instead of beside it. */
@@ -303,4 +303,130 @@
 .tippy-box[data-theme~="kc-slash"] .tippy-arrow,
 .tippy-box[data-theme~="kc-menu"] .tippy-arrow {
   display: none;
+}
+
+/* ── Comment highlights ──────────────────────────────────────────────────
+   The <mark data-comment-id> is document state, saved with the note. The
+   --active / --resolved / --pending variants are ProseMirror decorations
+   (see components/editor/comment-mark.ts), so toggling them never dirties
+   the note or fires a save. Amber matches --item-note, the existing note
+   accent — it reads as annotation rather than error. */
+mark[data-comment-id] {
+  /* Reset the UA default yellow on every surface, including any read-only
+     container that has no rule of its own below. */
+  background: transparent;
+  color: inherit;
+}
+.tiptap mark[data-comment-id] {
+  background: rgba(217, 119, 6, 0.16);
+  border-bottom: 2px solid rgba(217, 119, 6, 0.5);
+  border-radius: 2px;
+  padding: 0 1px;
+  cursor: pointer;
+}
+.tiptap mark[data-comment-id]:hover {
+  background: rgba(217, 119, 6, 0.26);
+}
+.tiptap .kc-comment--active {
+  background: rgba(217, 119, 6, 0.42);
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.35);
+}
+.tiptap .kc-comment--resolved {
+  background: transparent;
+  border-bottom: 1px dashed var(--border-strong);
+  opacity: 0.55;
+}
+/* A comment being composed: the row does not exist yet, so the range is only
+   a decoration — dashed to read as provisional. */
+.tiptap .kc-comment--pending {
+  background: rgba(217, 119, 6, 0.16);
+  border-bottom: 2px dashed rgba(217, 119, 6, 0.5);
+}
+
+/* ── Comments drawer ─────────────────────────────────────────────────────
+   A push panel: the note column is flex-1, so animating the drawer's width
+   slides it in AND narrows the note in one transition. Transforms cannot do
+   that — flexbox will not transition a sibling's flex-basis. Always mounted
+   (toggling data-open) so the collapse animates too. */
+.comments-drawer {
+  transition: width 200ms ease;
+}
+@media (min-width: 768px) {
+  .comments-drawer {
+    width: 0;
+    overflow: hidden;
+  }
+  .comments-drawer[data-open="true"] {
+    width: var(--detail-panel-width);
+  }
+  /* Pin the content width so text does not reflow while the panel collapses. */
+  .comments-drawer > .comments-drawer-inner {
+    width: var(--detail-panel-width);
+  }
+}
+/* Below md the drawer is a full-width sheet over the note, not a push panel —
+   400px of panel on a 375px viewport would leave no note at all. */
+@media (max-width: 767px) {
+  .comments-drawer {
+    transform: translateX(100%);
+    transition: transform 200ms ease;
+  }
+  .comments-drawer[data-open="true"] {
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .comments-drawer {
+    transition: none;
+  }
+}
+
+/* ── Note links ──────────────────────────────────────────────────────────
+   <span data-note-link-id> is document state, saved with the note. Deliberately
+   NOT an <a>: sanitizeHtml (lib/utils.ts) stamps target="_blank" onto every
+   <a href>, so a chip in a grid-card preview would open a new tab and full-
+   reload the SPA. Brand-tinted rather than the comments' amber, so the two
+   never read as the same thing. */
+[data-note-link-id] {
+  /* Neutral base on every surface, including any container with no rule below. */
+  color: inherit;
+  white-space: nowrap;
+}
+.tiptap .kc-note-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  border-radius: 4px;
+  padding: 0 4px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  cursor: pointer;
+  text-decoration: none;
+}
+.tiptap .kc-note-link:hover {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.tiptap .kc-note-link[data-selected] {
+  box-shadow: 0 0 0 2px var(--primary);
+}
+.tiptap .kc-note-link-icon {
+  position: relative;
+  top: 1px;
+  flex-shrink: 0;
+}
+
+/* Target deleted — an explicit dead state with a way out, mirroring the
+   detached-thread posture in the comments drawer rather than a dead click. */
+.tiptap .kc-note-link[data-note-link-missing="true"] {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  cursor: default;
+  text-decoration: line-through;
+}
+.tiptap .kc-note-link-remove {
+  margin-left: 2px;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
 }

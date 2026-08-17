@@ -8,6 +8,9 @@ export async function getItem(id: string): Promise<AnyItem> {
 
 export async function createNote(payload: {
   boardId: string;
+  // Makes the new note a sub-note nested inside this one. The server derives
+  // the board from the parent, so boardId is advisory when this is set.
+  parentItemId?: string;
   title?: string;
   content?: string;
 }): Promise<AnyItem> {
@@ -107,6 +110,14 @@ export async function colorItem(id: string, colorLabel: string): Promise<void> {
   await api.patch(`/items/${id}/color`, { colorLabel });
 }
 
-export async function moveItem(id: string, boardId: string): Promise<void> {
-  await api.patch(`/items/${id}/board`, { boardId });
+export interface MoveItemResult {
+  boardId: string;
+  // Set when the item was a sub-note: moving un-nests it, so the note it came
+  // out of needs refreshing.
+  unnestedFrom?: string | null;
+}
+
+export async function moveItem(id: string, boardId: string): Promise<MoveItemResult> {
+  const { data } = await api.patch<MoveItemResult>(`/items/${id}/board`, { boardId });
+  return data;
 }

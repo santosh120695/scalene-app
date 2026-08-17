@@ -78,6 +78,7 @@
     "vitest": "^4.1.10"
   },
   "resolutions": {
-    "prosemirror-model": "1.25.11"
+    "prosemirror-model": "1.25.11",
+    "prosemirror-view": "1.42.1"
   }
 }

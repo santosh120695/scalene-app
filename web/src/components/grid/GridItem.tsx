@@ -19,7 +19,7 @@ import {
 function itemTitle(item: AnyItem): string {
   switch (item.itemType) {
     case "note":
-      return item.title || "Note";
+      return item.title || "Untitled note";
     case "link":
       return item.title || item.domain || "Link";
     case "image":
@@ -114,7 +114,7 @@ export function GridItem({
           <Pencil size={14} strokeWidth={1.5} /> Edit
         </ContextMenuItem>
         <ContextMenuItem onClick={onOpen}>
-          <MessageSquare size={14} strokeWidth={1.5} /> Add sub-note
+          <MessageSquare size={14} strokeWidth={1.5} /> Add comment
         </ContextMenuItem>
         <ContextMenuItem onClick={onTogglePin}>
           <Pin size={14} strokeWidth={1.5} />{" "}

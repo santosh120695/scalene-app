@@ -20,10 +20,17 @@ import TableCell from "@tiptap/extension-table-cell";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { useCallback, useEffect, useRef } from "react";
-import { SlashCommand, type OnImage } from "./slash-command";
+import { SlashCommand, type OnImage, type OnSubNote } from "./slash-command";
 import { ResizableImage } from "./resizable-image";
 import { TrailingNode } from "./trailing-node";
 import { BlockDragHandle } from "./BlockDragHandle";
+import {
+  CommentMark,
+  COMMENT_MARK_NAME,
+  anchorIdsInDoc,
+  rangeHasComment,
+} from "./comment-mark";
+import { NoteLink } from "./note-link";
 import {
   Bold,
   Italic,
@@ -43,6 +50,7 @@ import {
   BetweenHorizontalStart,
   BetweenHorizontalEnd,
   Trash2,
+  MessageSquarePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadEditorImage } from "@/api/items";
@@ -100,6 +108,33 @@ const PlaceholderAttr = Extension.create({
   },
 });
 
+// Wiring for note-to-note links. Ids are passed explicitly rather than read from
+// the route: useParams() returns the LEFT split pane's item, so a chip in the
+// right pane would act on the wrong note.
+export interface NoteLinkWiring {
+  itemId: string;
+  boardId: string;
+  // The "/" command was picked and its trigger text already deleted; the host
+  // owns the picker dialog and the create/link sequencing from here.
+  onRequestLink: () => void;
+  onOpenLink: (targetItemId: string) => void;
+}
+
+// Wiring for highlight-anchored comments. Pass a memoized object — it is read
+// through a ref internally, but a new identity on every render would still
+// churn the effect that keeps that ref current.
+export interface CommentsWiring {
+  // The user selected text and pressed Comment. No anchor id yet and no mark
+  // applied: the parent owns that sequencing (create the row first, only then
+  // write the mark), so a cancelled composer can never leave a stray highlight.
+  onCreateAnchor: (quotedText: string) => void;
+  // The reader clicked an existing highlight.
+  onAnchorClick: (anchorId: string) => void;
+  // Anchor ids in document order, pushed up whenever the set changes. The
+  // drawer orders threads by this — the server cannot know document order.
+  onAnchorsChange: (anchorIds: string[]) => void;
+}
+
 interface Props {
   value: string;
   onChange: (html: string) => void;
@@ -110,6 +145,13 @@ interface Props {
   className?: string;
   // Render without the bordered box / focus ring (seamless writing surface).
   bare?: boolean;
+  // Enables the comment affordances (selection menu + click-to-open). The mark
+  // itself is always registered — see the extension list.
+  comments?: CommentsWiring;
+  // Enables the "/" sub-note command. The node itself is always registered.
+  noteLinks?: NoteLinkWiring;
+  // Hands the live editor to the parent so it can run comment commands.
+  onEditorReady?: (editor: Editor | null) => void;
 }
 
 function ToolbarButton({
@@ -210,6 +252,32 @@ function TableMenu({ editor }: { editor: Editor }) {
           onClick={() => run((c) => c.deleteTable())}
         >
           <Trash2 size={15} strokeWidth={1.5} />
+        </ToolbarButton>
+      </div>
+    </BubbleMenu>
+  );
+}
+
+// Floating "Comment" button shown over a non-empty text selection. Separate
+// from TableMenu (which owns the same placement inside tables) and gated off
+// already-commented text, since overlapping highlights are refused.
+function SelectionMenu({ editor, onComment }: { editor: Editor; onComment: () => void }) {
+  return (
+    <BubbleMenu
+      editor={editor}
+      pluginKey="commentMenu"
+      shouldShow={({ editor, state, from, to }) =>
+        from !== to &&
+        state.doc.textBetween(from, to, " ").trim().length > 0 &&
+        !editor.isActive("table") &&
+        !editor.isActive("codeBlock") &&
+        !editor.isActive(COMMENT_MARK_NAME)
+      }
+      options={{ placement: "top" }}
+    >
+      <div className="flex items-center gap-0.5 rounded-md border border-[var(--border)] bg-surface-primary p-1 shadow-panel">
+        <ToolbarButton label="Comment" onClick={onComment}>
+          <MessageSquarePlus size={15} strokeWidth={1.5} />
         </ToolbarButton>
       </div>
     </BubbleMenu>
@@ -352,11 +420,21 @@ export function RichTextEditor({
   compact = false,
   className,
   bare = false,
+  comments,
+  noteLinks,
+  onEditorReady,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Handlers below are wired into the editor at creation time, before `editor`
   // exists — they reach the live instance through this ref instead.
   const editorRef = useRef<Editor | null>(null);
+  // Same trick for the comment callbacks: the extension captures its options
+  // once, but the drawer's setters are recreated on every parent render.
+  const commentsRef = useRef<CommentsWiring | undefined>(comments);
+  commentsRef.current = comments;
+  const noteLinksRef = useRef<NoteLinkWiring | undefined>(noteLinks);
+  noteLinksRef.current = noteLinks;
+  const lastAnchorsRef = useRef<string>("");
 
   // Upload one image file and insert it at the current selection.
   const uploadAndInsert = useCallback(async (file: File) => {
@@ -413,19 +491,33 @@ export function RichTextEditor({
           (editor.isEmpty ? placeholder : ""),
       }),
       // Registered everywhere so per-line color/font content renders in every
-      // editor (including the read-only-ish sub-note composer); the controls to
-      // set them live in the full editor's drag-handle menu.
+      // editor (including compact ones); the controls to set them live in the
+      // full editor's drag-handle menu.
       TextStyle,
       Color,
       FontFamily,
       TaskList,
       TaskItemWithId.configure({ nested: false }),
+      // Registered in EVERY editor, compact ones included: an editor without
+      // this extension parses <mark data-comment-id> as unknown and silently
+      // drops the attribute on the next getHTML() — the same trap the
+      // TaskItemWithId comment above describes. Only the UI is gated below.
+      CommentMark.configure({
+        onAnchorClick: (id) => commentsRef.current?.onAnchorClick(id),
+      }),
+      // Registered everywhere for the same reason as CommentMark above: an
+      // editor without this node parses <span data-note-link-id> as an unknown
+      // element and drops it on the next getHTML(). Only the "/" command that
+      // creates one is gated to the full editor.
+      NoteLink.configure({
+        onOpen: (targetId) => noteLinksRef.current?.onOpenLink(targetId),
+      }),
       // Loaded everywhere so embedded <img>s always render; the "add image"
       // affordances (toolbar, slash command, paste/drop) are gated to the full
-      // editor below — the compact sub-note composer is too small for them.
+      // editor below — a compact composer is too small for them.
       ResizableImage.configure({ inline: false, allowBase64: false }),
-      // Tables and the "/" command palette are full-editor-only — the compact
-      // sub-note composer is too small (minHeight 56) for either to make sense.
+      // Tables and the "/" command palette are full-editor-only — a compact
+      // composer is too small (minHeight 56) for either to make sense.
       ...(compact
         ? []
         : [
@@ -438,6 +530,15 @@ export function RichTextEditor({
                 editor.chain().focus().deleteRange(range).run();
                 fileInputRef.current?.click();
               }) as OnImage,
+              // Only offered when the host can say which note this belongs to.
+              // Options are snapshotted at editor creation, so this reads the
+              // ref rather than closing over the current render's props.
+              onSubNote: (noteLinks
+                ? ({ editor, range }) => {
+                    editor.chain().focus().deleteRange(range).run();
+                    noteLinksRef.current?.onRequestLink();
+                  }
+                : undefined) as OnSubNote | undefined,
             }),
             Table.configure({ resizable: true }),
             TableRow,
@@ -466,8 +567,41 @@ export function RichTextEditor({
         },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
     onBlur: () => onBlur?.(),
+    // Selection-only transactions change which anchors exist too (undo/redo,
+    // paste), so watch every transaction — but only push up when the set
+    // actually changed, or the drawer would re-render on every keystroke.
+    onTransaction: ({ editor }) => {
+      if (!commentsRef.current) return;
+      const ids = anchorIdsInDoc(editor);
+      const joined = ids.join("|");
+      if (joined === lastAnchorsRef.current) return;
+      lastAnchorsRef.current = joined;
+      commentsRef.current.onAnchorsChange(ids);
+    },
   });
   editorRef.current = editor;
+
+  useEffect(() => {
+    onEditorReady?.(editor);
+    return () => onEditorReady?.(null);
+  }, [editor, onEditorReady]);
+
+  // Mark the selection as pending (a decoration only — the document is left
+  // untouched, so this cannot dirty the note) and hand the quoted text up. The
+  // real mark is applied by the parent once the comment row exists.
+  const startComment = useCallback(() => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    const { from, to } = ed.state.selection;
+    if (rangeHasComment(ed, from, to)) {
+      toast.error("This text already has a comment");
+      return;
+    }
+    const quoted = ed.state.doc.textBetween(from, to, " ").trim();
+    if (!quoted) return;
+    ed.commands.setPendingComment(from, to);
+    commentsRef.current?.onCreateAnchor(quoted);
+  }, []);
 
   // Insert the file chosen via the hidden picker, then reset so the same file
   // can be selected again next time.
@@ -511,6 +645,7 @@ export function RichTextEditor({
             onChange={onFilePicked}
           />
           <TableMenu editor={editor} />
+          {comments && <SelectionMenu editor={editor} onComment={startComment} />}
           <BlockDragHandle editor={editor} />
         </>
       )}

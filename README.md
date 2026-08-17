@@ -23,7 +23,7 @@ borders, slide-in detail panel).
 - Drag-to-reorder (dnd-kit → `PATCH /reorder`)
 - Pin to top, color labels, right-click context menu + overflow menu
 - Slide-in detail panel with inline PDF/image/link/note view
-- Sub-notes (rich text, author + timestamp)
+- Comments on notes: highlight a passage to start a thread, with replies and resolve
 - Full-text search across all item types (PostgreSQL `to_tsvector`, `UNION ALL`)
 - Keyboard shortcuts: `Ctrl/⌘+N` new note, `Ctrl/⌘+K` / `Ctrl+F` search, `Esc` close panel
 - Empty states, toasts, skeletons, reduced-motion support
@@ -108,7 +108,7 @@ knowledgecanvas/
 │       ├── storage/       # Storage interface: oracle.go + local.go
 │       ├── scraper/       # colly OG-tag scraper
 │       ├── pdfutil/       # pdfcpu page count
-│       └── handlers/      # HTTP handlers (auth, boards, items, subnotes, search)
+│       └── handlers/      # HTTP handlers (auth, boards, items, comments, search)
 ├── web/
 │   └── src/
 │       ├── api/           # axios clients
@@ -144,7 +144,7 @@ forced technical constraint, not a scope cut.
    - `POST /api/v1/notes` · `POST /api/v1/links` · `POST /api/v1/pdfs` · `POST /api/v1/images`
      (and their `PUT /:id` updates)
    - shared item ops stay at `/api/v1/items/:id`, `/items/:id/pin`,
-     `/items/:id/color`, `/items/:id/sub-notes`, `/boards/:id/reorder`
+     `/items/:id/color`, `/items/:id/comments`, `/boards/:id/reorder`
    The frontend uses these paths, so the contract is internally consistent.
    (A test in `cmd/server/main_test.go` guards against route conflicts.)
 

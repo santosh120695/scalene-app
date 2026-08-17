@@ -21,6 +21,7 @@ import {
   ListOrdered,
   ListTodo,
   Minus,
+  NotebookPen,
   Quote,
   Table2,
   Type,
@@ -41,8 +42,17 @@ interface CommandItem {
 // then opens a file picker and uploads the chosen file (see RichTextEditor).
 export type OnImage = (props: { editor: Editor; range: Range }) => void;
 
-function buildCommands(onImage?: OnImage): CommandItem[] {
-  return [...BASE_COMMANDS, ...(onImage ? [imageCommand(onImage)] : [])];
+// Called when the "Sub-note" command is picked. The host clears the slash range
+// and opens the picker, which either creates a child note or links an existing
+// one (see NoteWithComments).
+export type OnSubNote = (props: { editor: Editor; range: Range }) => void;
+
+function buildCommands(onImage?: OnImage, onSubNote?: OnSubNote): CommandItem[] {
+  return [
+    ...BASE_COMMANDS,
+    ...(onImage ? [imageCommand(onImage)] : []),
+    ...(onSubNote ? [subNoteCommand(onSubNote)] : []),
+  ];
 }
 
 function imageCommand(onImage: OnImage): CommandItem {
@@ -52,6 +62,16 @@ function imageCommand(onImage: OnImage): CommandItem {
     icon: ImageIcon,
     keywords: ["image", "picture", "photo", "img", "upload"],
     command: ({ editor, range }) => onImage({ editor, range }),
+  };
+}
+
+function subNoteCommand(onSubNote: OnSubNote): CommandItem {
+  return {
+    title: "Sub-note",
+    description: "Create a nested note, or link an existing one",
+    icon: NotebookPen,
+    keywords: ["sub", "subnote", "note", "link", "child", "nested", "page", "ref"],
+    command: ({ editor, range }) => onSubNote({ editor, range }),
   };
 }
 
@@ -259,6 +279,9 @@ export const SlashCommand = Extension.create({
       // Optional handler for the "Image" command; when absent the command is
       // hidden (e.g. the compact composer, which doesn't load this extension).
       onImage: undefined as OnImage | undefined,
+      // Same pattern: hidden unless the host can service it. Only the full note
+      // editor knows which note the sub-note would belong to.
+      onSubNote: undefined as OnSubNote | undefined,
       suggestion: {
         char: "/",
         startOfLine: false,
@@ -278,7 +301,7 @@ export const SlashCommand = Extension.create({
   },
 
   addProseMirrorPlugins() {
-    const commands = buildCommands(this.options.onImage);
+    const commands = buildCommands(this.options.onImage, this.options.onSubNote);
     return [
       Suggestion({
         editor: this.editor,

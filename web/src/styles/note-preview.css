@@ -3,7 +3,7 @@
 
    These surfaces render saved note content (via dangerouslySetInnerHTML) and
    reuse the editor's typography at different scales:
-     .prose-note   — sub-notes in the detail view
+     .prose-note   — small embedded prose blocks
      .note-preview — compact board grid-card previews
      .reader       — Pocket-style article rendering for link items
 
@@ -239,4 +239,27 @@
   border: none;
   border-top: 1px solid var(--border-default);
   margin: 1.5em 0;
+}
+
+/* Comment highlights on read-only surfaces. sanitizeHtml passes data-* through
+   (that is also how data-todo-id survives), so saved highlights do render in
+   grid previews and the reader — muted, since there is nothing to click. */
+.note-preview mark[data-comment-id],
+.prose-note mark[data-comment-id],
+.reader mark[data-comment-id] {
+  background: var(--muted);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Note links on read-only surfaces. sanitizeHtml passes data-* through, so a
+   chip does render in grid cards and journal previews — muted and inert, since
+   the whole card is the click target there. */
+.note-preview [data-note-link-id],
+.prose-note [data-note-link-id],
+.journal-preview [data-note-link-id] {
+  background: var(--muted);
+  border-radius: 3px;
+  padding: 0 3px;
+  cursor: inherit;
 }

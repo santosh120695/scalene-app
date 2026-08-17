@@ -25,6 +25,16 @@ func (h *Handler) GetItem(c *gin.Context) {
 		return
 	}
 	out := h.itemMap(c.Request.Context(), *ci)
+	if ci.ItemType == "note" {
+		// Folded in rather than exposed as its own route: this list is the only
+		// way to reach a sub-note whose inline link was never written (a create
+		// that succeeded while the follow-up note save failed), so it must never
+		// be a separately-cached query that can go stale or missing.
+		out["subNotes"] = h.subNotesOf(ci.ID, userID)
+	}
+	if ci.ParentItemID != nil {
+		out["parentChain"] = h.parentChainOf(ci.ID, userID)
+	}
 	out["success"] = true
 	c.JSON(http.StatusOK, out)
 }
@@ -148,7 +158,11 @@ func (h *Handler) MoveItem(c *gin.Context) {
 		notFound(c, "Board not found")
 		return
 	}
-	if req.BoardID == ci.BoardID {
+	parentBefore := ci.ParentItemID
+
+	// A sub-note moved to its own board is the natural way to un-nest it, so the
+	// no-op shortcut only applies to items that are already top-level.
+	if req.BoardID == ci.BoardID && ci.ParentItemID == nil {
 		c.JSON(http.StatusOK, gin.H{"success": true, "boardId": ci.BoardID})
 		return
 	}
@@ -164,17 +178,37 @@ func (h *Handler) MoveItem(c *gin.Context) {
 		if min != nil {
 			sortOrder = *min - 1
 		}
+		// The whole subtree follows, so a child never ends up on a different
+		// board from its parent — the invariant DeleteBoard relies on.
+		ids, err := h.descendantItemIDs(tx, userID, ci.ID)
+		if err != nil {
+			return err
+		}
+		if err := tx.Model(&models.CanvasItem{}).Where("id IN ?", ids).
+			Update("board_id", req.BoardID).Error; err != nil {
+			return err
+		}
+		// Moving un-nests: the item becomes a top-level card on the target board.
+		// This is the only way out of being a sub-note, so it must not be silent
+		// — the client toast says which note it came out of. A map is required
+		// here; a struct update would skip the nil.
 		return tx.Model(&models.CanvasItem{}).Where("id = ?", ci.ID).
-			Updates(map[string]any{"board_id": req.BoardID, "sort_order": sortOrder}).Error
+			Updates(map[string]any{"sort_order": sortOrder, "parent_item_id": nil}).Error
 	})
 	if err != nil {
 		serverError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"success": true, "boardId": req.BoardID})
+	// unnestedFrom tells the client which parent note just lost a sub-note, so it
+	// can refresh that note's list and say so in the toast.
+	c.JSON(http.StatusOK, gin.H{
+		"success":      true,
+		"boardId":      req.BoardID,
+		"unnestedFrom": parentBefore,
+	})
 }
 
-// DELETE /api/v1/items/:id — soft-deletes the item and its sub-notes/todos.
+// DELETE /api/v1/items/:id — soft-deletes the item and its comments/todos.
 // Stored files are kept so the item remains recoverable.
 func (h *Handler) DeleteItem(c *gin.Context) {
 	userID := middleware.UserID(c)
@@ -190,13 +224,19 @@ func (h *Handler) DeleteItem(c *gin.Context) {
 	}
 
 	err = h.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("item_id = ?", ci.ID).Delete(&models.SubNote{}).Error; err != nil {
+		// Sub-notes are hidden from the grid, so leaving them behind would strand
+		// them with no way in. Take the whole subtree.
+		ids, err := h.descendantItemIDs(tx, userID, ci.ID)
+		if err != nil {
 			return err
 		}
-		if err := tx.Where("item_id = ?", ci.ID).Delete(&models.Todo{}).Error; err != nil {
+		if err := tx.Where("item_id IN ?", ids).Delete(&models.Comment{}).Error; err != nil {
 			return err
 		}
-		return tx.Delete(&models.CanvasItem{}, "id = ?", ci.ID).Error
+		if err := tx.Where("item_id IN ?", ids).Delete(&models.Todo{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("id IN ?", ids).Delete(&models.CanvasItem{}).Error
 	})
 	if err != nil {
 		serverError(c, err)

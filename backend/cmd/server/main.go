@@ -22,7 +22,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("startup: %v", err)
 	}
-	if err := database.Migrate(db); err != nil {
+	if err = database.Migrate(db); err != nil {
 		log.Fatalf("startup: migrations: %v", err)
 	}
 

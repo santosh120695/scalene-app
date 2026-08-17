@@ -27,6 +27,53 @@ func (h *Handler) boardJSON(b *models.Board, itemCount int64) gin.H {
 	}
 }
 
+// subNoteCounts returns how many live sub-notes hang off each of the given
+// notes, in one grouped query. Non-note items are skipped — only notes nest.
+func (h *Handler) subNoteCounts(items []models.CanvasItem) map[uuid.UUID]int {
+	ids := make([]uuid.UUID, 0, len(items))
+	for _, ci := range items {
+		if ci.ItemType == "note" {
+			ids = append(ids, ci.ID)
+		}
+	}
+	out := map[uuid.UUID]int{}
+	if len(ids) == 0 {
+		return out
+	}
+	var rows []struct {
+		ParentItemID uuid.UUID
+		N            int
+	}
+	h.DB.Model(&models.CanvasItem{}).
+		Select("parent_item_id, COUNT(*) AS n").
+		Where("parent_item_id IN ?", ids).
+		Group("parent_item_id").Scan(&rows)
+	for _, r := range rows {
+		out[r.ParentItemID] = r.N
+	}
+	return out
+}
+
+// itemCountsByBoard returns live top-level item counts for every board the user
+// owns, in one grouped query. Counts what the grid actually shows, so sub-notes
+// are excluded. GORM adds `deleted_at IS NULL` for us.
+func (h *Handler) itemCountsByBoard(userID uuid.UUID) map[uuid.UUID]int64 {
+	var rows []struct {
+		BoardID uuid.UUID
+		N       int64
+	}
+	h.DB.Model(&models.CanvasItem{}).
+		Select("board_id, COUNT(*) AS n").
+		Where("user_id = ? AND parent_item_id IS NULL", userID).
+		Group("board_id").Scan(&rows)
+
+	out := make(map[uuid.UUID]int64, len(rows))
+	for _, r := range rows {
+		out[r.BoardID] = r.N
+	}
+	return out
+}
+
 func (h *Handler) ListBoards(c *gin.Context) {
 	userID := middleware.UserID(c)
 	var boards []models.Board
@@ -35,11 +82,14 @@ func (h *Handler) ListBoards(c *gin.Context) {
 		return
 	}
 
+	// One grouped query rather than a count per board — the per-board version was
+	// an N+1 over every board the user owns. Callers rely on this being real:
+	// ItemTreePicker only offers to expand a board when itemCount > 0.
+	counts := h.itemCountsByBoard(userID)
+
 	out := make([]gin.H, 0, len(boards))
 	for i := range boards {
-		// var count int64
-		// h.DB.Model(&models.CanvasItem{}).Where("board_id = ?", boards[i].ID).Count(&count)
-		out = append(out, h.boardJSON(&boards[i], 0))
+		out = append(out, h.boardJSON(&boards[i], counts[boards[i].ID]))
 	}
 	c.JSON(http.StatusOK, gin.H{"boards": out})
 }
@@ -96,8 +146,10 @@ func (h *Handler) GetBoard(c *gin.Context) {
 		return
 	}
 
+	// Top-level only: sub-notes are reached through their parent note, not the
+	// grid. Without this filter every jotted fragment becomes a card.
 	var items []models.CanvasItem
-	if err := h.DB.Where("board_id = ?", boardID).
+	if err := h.DB.Where("board_id = ? AND parent_item_id IS NULL", boardID).
 		Order("is_pinned DESC, sort_order ASC").
 		Find(&items).Error; err != nil {
 		serverError(c, err)
@@ -108,6 +160,16 @@ func (h *Handler) GetBoard(c *gin.Context) {
 	itemDTOs := make([]gin.H, 0, len(items))
 	for _, ci := range items {
 		itemDTOs = append(itemDTOs, h.itemMap(ctx, ci))
+	}
+
+	// One grouped query for the whole page rather than a count per card, which
+	// would double GetBoard's already-N+1 query load.
+	for id, n := range h.subNoteCounts(items) {
+		for i := range items {
+			if items[i].ID == id {
+				itemDTOs[i]["subNoteCount"] = n
+			}
+		}
 	}
 
 	resp := h.boardJSON(board, int64(len(items)))
@@ -161,7 +223,7 @@ func (h *Handler) UpdateBoard(c *gin.Context) {
 		return
 	}
 	var count int64
-	h.DB.Model(&models.CanvasItem{}).Where("board_id = ?", board.ID).Count(&count)
+	h.DB.Model(&models.CanvasItem{}).Where("board_id = ? AND parent_item_id IS NULL", board.ID).Count(&count)
 	c.JSON(http.StatusOK, h.boardJSON(board, count))
 }
 
@@ -234,7 +296,7 @@ func (h *Handler) MoveBoard(c *gin.Context) {
 		return
 	}
 	var count int64
-	h.DB.Model(&models.CanvasItem{}).Where("board_id = ?", board.ID).Count(&count)
+	h.DB.Model(&models.CanvasItem{}).Where("board_id = ? AND parent_item_id IS NULL", board.ID).Count(&count)
 	c.JSON(http.StatusOK, h.boardJSON(board, count))
 }
 
@@ -283,7 +345,7 @@ func (h *Handler) DeleteBoard(c *gin.Context) {
 			return err
 		}
 		if len(itemIDs) > 0 {
-			if err = tx.Where("item_id IN ?", itemIDs).Delete(&models.SubNote{}).Error; err != nil {
+			if err = tx.Where("item_id IN ?", itemIDs).Delete(&models.Comment{}).Error; err != nil {
 				return err
 			}
 		}

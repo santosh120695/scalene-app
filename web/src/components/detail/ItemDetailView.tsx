@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -6,14 +6,13 @@ import {
   Columns2,
   ExternalLink,
   MessageSquare,
+  StickyNote,
   Trash2,
   X,
 } from "lucide-react";
 import * as itemsApi from "@/api/items";
 import { boardKeys, useBoardsList } from "@/hooks/useBoards";
-import { todoKeys } from "@/hooks/useTodos";
-import { RichTextEditor } from "@/components/editor/RichTextEditor";
-import { SubNotes } from "@/components/detail/SubNotes";
+import { NoteWithComments } from "@/components/detail/NoteWithComments";
 import { Button } from "@/components/ui/button";
 import { cn, sanitizeHtml } from "@/lib/utils";
 import { detectEmbed } from "@/lib/embeds";
@@ -51,21 +50,7 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
   const qc = useQueryClient();
   const boards = useBoardsList().data ?? [];
   const [noteStatus, setNoteStatus] = useState("");
-  const [subNotesOpen, setSubNotesOpen] = useState(false);
-
-  // Ancestor chain (root → … → current board) for the breadcrumb trail.
-  const breadcrumbs = useMemo(() => {
-    const byId = new Map(boards.map((b) => [b.id, b]));
-    const chain: { id: string; title: string }[] = [];
-    let cur = byId.get(boardId);
-    while (cur) {
-      chain.unshift({ id: cur.id, title: cur.title });
-      cur = cur.parentId ? byId.get(cur.parentId) : undefined;
-    }
-    return chain;
-  }, [boards, boardId]);
-  const ancestors = breadcrumbs.slice(0, -1);
-  const currentBoard = breadcrumbs[breadcrumbs.length - 1];
+  const [commentsOpen, setCommentsOpen] = useState(false);
 
   const { data: item, isLoading } = useQuery({
     queryKey: ["item", itemId],
@@ -73,8 +58,33 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
     enabled: !!itemId,
   });
 
+  // The `boardId` prop is the route's board, which belongs to the LEFT pane —
+  // AppPage passes the same value to both panes. An item opened in the right
+  // pane can live on a different board (a cross-board note link), so trust the
+  // fetched item and fall back to the prop only while it loads.
+  const effectiveBoardId = item?.boardId ?? boardId;
+
+  // Ancestor chain (root → … → current board) for the breadcrumb trail.
+  const breadcrumbs = useMemo(() => {
+    const byId = new Map(boards.map((b) => [b.id, b]));
+    const chain: { id: string; title: string }[] = [];
+    let cur = byId.get(effectiveBoardId);
+    while (cur) {
+      chain.unshift({ id: cur.id, title: cur.title });
+      cur = cur.parentId ? byId.get(cur.parentId) : undefined;
+    }
+    return chain;
+  }, [boards, effectiveBoardId]);
+  const ancestors = breadcrumbs.slice(0, -1);
+  const currentBoard = breadcrumbs[breadcrumbs.length - 1];
+  // A sub-note sits under one or more parent notes; the server returns that
+  // chain root-most first (walking it client-side would mean N sequential
+  // fetches with no ids to start from).
+  const noteAncestors =
+    item?.itemType === "note" ? (item.parentChain ?? []) : [];
+
   function backToBoard() {
-    navigate(`/b/${boardId}`);
+    navigate(`/b/${effectiveBoardId}`);
   }
 
   function closePane() {
@@ -85,7 +95,7 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
   async function remove() {
     try {
       await itemsApi.deleteItem(itemId);
-      qc.invalidateQueries({ queryKey: boardKeys.detail(boardId) });
+      qc.invalidateQueries({ queryKey: boardKeys.detail(effectiveBoardId) });
       qc.invalidateQueries({ queryKey: boardKeys.list });
       toast.success("Item deleted");
       if (onClosePane) closePane();
@@ -115,7 +125,9 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
     <div className="flex h-full flex-col">
       {/* Header */}
       <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center py-3 gap-2  bg-card px-3 sm:gap-3 sm:px-4">
-        <nav className="flex min-w-0 items-center gap-1 text-[13px]">
+        {/* Clips rather than pushing the actions off the edge: a nested note's
+            trail can be long, and a split pane is half the usual width. */}
+        <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[13px]">
           {ancestors.map((crumb) => (
             <span
               key={crumb.id}
@@ -146,6 +158,24 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
             strokeWidth={1.5}
             className="shrink-0 text-ink-muted opacity-60"
           />
+          {/* Parent notes, when this is a sub-note. A distinct icon keeps the
+              board/note boundary readable in a long trail. */}
+          {noteAncestors.map((crumb) => (
+            <span key={crumb.id} className="hidden shrink-0 items-center gap-1 sm:flex">
+              <button
+                onClick={() => navigate(`/b/${effectiveBoardId}/item/${crumb.id}`)}
+                className="flex max-w-[100px] items-center gap-1 truncate text-ink-secondary transition-colors hover:text-brand sm:max-w-[140px]"
+              >
+                <StickyNote size={12} strokeWidth={1.5} className="shrink-0" />
+                <span className="truncate">{crumb.title || "Untitled note"}</span>
+              </button>
+              <ChevronRight
+                size={13}
+                strokeWidth={1.5}
+                className="shrink-0 text-ink-muted opacity-60"
+              />
+            </span>
+          ))}
           {/* Current item — final crumb, present on every detail page. */}
           <span className="min-w-0 truncate font-medium text-ink-primary">
             {item ? itemLabel(item) : "…"}
@@ -156,7 +186,7 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
             {noteStatus}
           </span>
         )}
-        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
           {originalUrl && (
             <Button asChild variant="ghost" size="sm">
               <a href={originalUrl} target="_blank" rel="noreferrer">
@@ -165,20 +195,18 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
               </a>
             </Button>
           )}
-          {item &&
-            item.itemType !== "note" &&
-            item.itemType !== "excalidraw" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Toggle sub-notes"
-                onClick={() => setSubNotesOpen((o) => !o)}
-                className={cn(subNotesOpen && "bg-brand-light text-brand")}
-              >
-                <MessageSquare size={14} strokeWidth={1.5} />
-                <span className="hidden sm:inline">Sub-notes</span>
-              </Button>
-            )}
+          {item?.itemType === "note" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Toggle comments"
+              onClick={() => setCommentsOpen((o) => !o)}
+              className={cn(commentsOpen && "bg-brand-light text-brand")}
+            >
+              <MessageSquare size={14} strokeWidth={1.5} />
+              <span className="hidden sm:inline">Comments</span>
+            </Button>
+          )}
           {!onClosePane && (
             <Button
               variant="ghost"
@@ -187,7 +215,7 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
               className="hidden sm:inline-flex"
               onClick={() =>
                 navigate(
-                  `/b/${boardId}/item/${routeItemId ?? itemId}?split=browse`,
+                  `/b/${effectiveBoardId}/item/${routeItemId ?? itemId}?split=browse`,
                 )
               }
             >
@@ -230,16 +258,14 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
             <LoadingBody />
           </div>
         ) : item.itemType === "note" ? (
-          <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
-            <div className="note-doc mx-auto w-full max-w-[1000px] px-1 sm:px-12 py-8">
-              <NoteEditor
-                key={item.id}
-                note={item as NoteItem}
-                boardId={boardId}
-                onStatus={setNoteStatus}
-              />
-            </div>
-          </div>
+          <NoteWithComments
+            key={item.id}
+            note={item as NoteItem}
+            boardId={effectiveBoardId}
+            commentsOpen={commentsOpen}
+            onCommentsOpenChange={setCommentsOpen}
+            onStatus={setNoteStatus}
+          />
         ) : item.itemType === "excalidraw" ? (
           // Positioning context so the canvas can pin itself to fill the whole
           // pane below the header, regardless of flex sizing on lazy mount.
@@ -247,11 +273,10 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
             <ExcalidrawPane
               key={item.id}
               drawing={item as ExcalidrawItem}
-              boardId={boardId}
+              boardId={effectiveBoardId}
             />
           </div>
         ) : (
-          // Split view: content (3) on the left, sub-notes (1) on the right.
           <div className="flex min-h-0 flex-1">
             {item.itemType === "pdf" ? (
               // The PDF viewer manages its own scrolling and chrome, so let it
@@ -266,85 +291,10 @@ export function ItemDetailView({ itemId, boardId, onClosePane }: Props) {
                 </div>
               </div>
             )}
-            {subNotesOpen && (
-              <aside className="scroll-thin flex-1 min-w-[260px] overflow-y-auto border-l border-[var(--border)] bg-surface-primary p-5">
-                <SubNotes itemId={item.id} />
-              </aside>
-            )}
           </div>
         )}
       </div>
     </div>
-  );
-}
-
-// ── Full-page note editor (no sub-notes) ──
-function NoteEditor({
-  note,
-  boardId,
-  onStatus,
-}: {
-  note: NoteItem;
-  boardId: string;
-  onStatus: (status: string) => void;
-}) {
-  const qc = useQueryClient();
-  // const [title, setTitle] = useState(note.title ?? "");
-  const [content, setContent] = useState(note.content ?? "");
-  const dirty = useRef(false);
-
-  const setStatus = onStatus;
-
-  useEffect(() => () => onStatus(""), [onStatus]);
-
-  const extractTitle = (content: string): string => {
-    const parser = new DOMParser().parseFromString(content, "text/html");
-    return parser.body.children[0].textContent.trim() ?? "";
-  };
-
-  async function save() {
-    if (!dirty.current) return;
-    setStatus("Saving…");
-    try {
-      const title = extractTitle(content);
-      const updated = (await itemsApi.updateNote(note.id, {
-        title,
-        content,
-      })) as NoteItem;
-      dirty.current = false;
-      // The backend injects a stable id into any new checklist item so it can
-      // be toggled from the central Todos view — pick up that rewritten HTML.
-      if (updated.content && updated.content !== content) {
-        setContent(updated.content);
-      }
-      setStatus("Saved");
-      qc.invalidateQueries({ queryKey: ["item", note.id] });
-      qc.invalidateQueries({ queryKey: boardKeys.detail(boardId) });
-      // Checklist items may have been checked/unchecked or deleted in this
-      // save — keep the central Todos view from showing stale/removed items.
-      qc.invalidateQueries({ queryKey: todoKeys.list });
-    } catch (e) {
-      setStatus("");
-      toast.error(errMessage(e, "Could not save note"));
-    }
-  }
-
-  return (
-    <>
-      <RichTextEditor
-        value={content}
-        onChange={(html) => {
-          setContent(html);
-          dirty.current = true;
-          setStatus("");
-        }}
-        onBlur={save}
-        placeholder="Type '/' for commands, or just start writing…"
-        minHeight={600}
-        className="bg-card"
-        bare
-      />
-    </>
   );
 }
 
