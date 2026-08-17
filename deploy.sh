@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "==> Building web..."
 cd "$ROOT/web"
-export VITE_API_URL=https://scalene.webhop.me
+export VITE_API_URL=https://scalene.santosh.work
 # npm ci
 npm run build
 echo "    Web build complete → web/dist"
