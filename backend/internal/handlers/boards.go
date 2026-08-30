@@ -149,7 +149,7 @@ func (h *Handler) GetBoard(c *gin.Context) {
 	// Top-level only: sub-notes are reached through their parent note, not the
 	// grid. Without this filter every jotted fragment becomes a card.
 	var items []models.CanvasItem
-	if err := h.DB.Where("board_id = ? AND parent_item_id IS NULL", boardID).
+	if err := h.DB.Where("board_id = ?", boardID).
 		Order("is_pinned DESC, sort_order ASC").
 		Find(&items).Error; err != nil {
 		serverError(c, err)

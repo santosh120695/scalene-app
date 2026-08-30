@@ -280,7 +280,8 @@
   max-width: 100%;
   height: auto;
 }
-.tiptap p.is-editor-empty:first-child::before {
+/* Placeholder styling for empty blocks (paragraphs, headings, task list items, etc.) */
+.tiptap .is-empty::before {
   content: attr(data-placeholder);
   float: left;
   color: var(--text-muted);

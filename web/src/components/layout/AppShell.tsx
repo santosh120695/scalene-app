@@ -117,7 +117,6 @@ export function AppShell({
           id="app-content"
           className="scroll-thin flex-1 overflow-y-auto overflow-x-hidden bg-card"
         >
-          {/* Mobile top bar — hamburger to open the nav drawer */}
           <div className="sticky top-0 z-20 flex h-12 items-center gap-2 border-b border-[var(--border)] bg-card px-3 lg:hidden">
             <button
               onClick={() => setMobileNav(true)}

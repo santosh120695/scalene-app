@@ -142,6 +142,7 @@ export function AppPage() {
     if (!boardId || creatingNote) return;
     setCreatingNote(true);
     try {
+      console.log(template.content)
       const created = await itemsApi.createNote({
         boardId,
         title: "",
@@ -533,7 +534,6 @@ export function AppPage() {
         </>
       )}
 
-      {/* Quick-add floating button (board grid view only) */}
       {boardId && !itemId && (
         <AddItemFab
           onAddNote={handleNewNote}

@@ -4,14 +4,10 @@ import {
   EditorContent,
   type Editor,
 } from "@tiptap/react";
-// v3 moved the menu components out of the main entry and onto Floating UI.
 import { BubbleMenu } from "@tiptap/react/menus";
 import { Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-// TextStyle is the base <span style> mark; Color and FontFamily hang their
-// attributes off it. Used by the block drag-handle menu to recolor / re-font a
-// single line, and to render that styling everywhere content is shown.
 import { TextStyle, Color, FontFamily } from "@tiptap/extension-text-style";
 import { Table } from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
@@ -97,10 +93,13 @@ const PlaceholderAttr = Extension.create({
             default: null,
             keepOnSplit: false,
             parseHTML: (el) => el.getAttribute("data-placeholder"),
-            renderHTML: (attrs) =>
-              attrs.placeholder
-                ? { "data-placeholder": attrs.placeholder }
-                : {},
+            renderHTML: (attrs) => {
+              return (
+                attrs.placeholder
+                  ? { "data-placeholder": attrs.placeholder }
+                  : {}
+              )
+            },
           },
         },
       },
@@ -486,9 +485,12 @@ export function RichTextEditor({
         showOnlyCurrent: false,
         // A block's own hint wins; otherwise only the whole-editor-empty prompt
         // shows (returning "" leaves ordinary empty lines hint-free as before).
-        placeholder: ({ editor, node }) =>
-          (node.attrs.placeholder as string | null) ||
-          (editor.isEmpty ? placeholder : ""),
+        placeholder: ({ editor, node, pos }) => {
+          return (
+            (node.attrs.placeholder as string | null) ||
+            (editor.isEmpty && pos === 0 ? placeholder : "")
+          );
+        },
       }),
       // Registered everywhere so per-line color/font content renders in every
       // editor (including compact ones); the controls to set them live in the

@@ -53,9 +53,6 @@ export function NoteWithComments({
 }: Props) {
   const qc = useQueryClient();
   const [content, setContent] = useState(note.content ?? "");
-  // Saves read the live HTML from here, never from the `content` closure: a
-  // save fired immediately after applying a mark would otherwise persist the
-  // pre-mark state, since React state has not re-rendered yet.
   const contentRef = useRef(content);
   const dirty = useRef(false);
   const editorRef = useRef<Editor | null>(null);
@@ -63,7 +60,6 @@ export function NoteWithComments({
   const editorPaneRef = useRef<HTMLDivElement>(null);
 
   const [pending, setPending] = useState<PendingThread | null>(null);
-  // Read inside save(), which is not re-created per render — keep it in a ref.
   const pendingRef = useRef(false);
   const [activeAnchorId, setActiveAnchorId] = useState<string | null>(null);
   const [anchorOrder, setAnchorOrder] = useState<string[]>([]);
@@ -348,9 +344,6 @@ export function NoteWithComments({
 
   return (
     <div className="flex min-h-0 flex-1">
-      {/* Positioning context for the word counter: it sits outside the scroll
-          container so it stays pinned to the pane instead of scrolling away
-          with the text. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
         <div ref={editorPaneRef} className="scroll-thin min-h-0 flex-1 overflow-y-auto">
           <div className="note-doc mx-auto w-full max-w-[1000px] px-1 py-8 sm:px-12">

@@ -2,11 +2,10 @@ package database
 
 import (
 	"fmt"
+	"knowledgecanvas/migrations"
 	"log"
 	"sort"
 	"strings"
-
-	"knowledgecanvas/migrations"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -28,8 +27,6 @@ func Connect(dsn string, debug bool) (*gorm.DB, error) {
 	return db, nil
 }
 
-// Migrate applies every embedded SQL migration that has not yet been recorded
-// in the schema_migrations table, in filename order, each in its own transaction.
 func Migrate(db *gorm.DB) error {
 	if err := db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
 		version VARCHAR(255) PRIMARY KEY,

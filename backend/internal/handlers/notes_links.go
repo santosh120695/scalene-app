@@ -36,11 +36,6 @@ func (h *Handler) CreateNote(c *gin.Context) {
 		return
 	}
 
-	// A sub-note ALWAYS lands on its parent's board, so boardId is advisory once
-	// parentItemId is set. That invariant is what keeps DeleteBoard correct
-	// without changes (it deletes by board_id IN, so a subtree can never be
-	// stranded on a board that isn't being deleted) and what lets the split view
-	// carry one boardId in the route for both panes.
 	boardID := req.BoardID
 	if req.ParentItemID != nil {
 		parent, err := h.ownedItem(*req.ParentItemID, userID)
@@ -57,9 +52,6 @@ func (h *Handler) CreateNote(c *gin.Context) {
 
 	var ci models.CanvasItem
 	err := h.DB.Transaction(func(tx *gorm.DB) error {
-		// No self-parent check needed: this row's id isn't minted until Create
-		// below, and parent_item_id is never rewritten afterwards, so a cycle
-		// cannot form.
 		ci = models.CanvasItem{
 			BoardID:      boardID,
 			UserID:       userID,

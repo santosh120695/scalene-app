@@ -26,10 +26,6 @@ func (h *Handler) GetItem(c *gin.Context) {
 	}
 	out := h.itemMap(c.Request.Context(), *ci)
 	if ci.ItemType == "note" {
-		// Folded in rather than exposed as its own route: this list is the only
-		// way to reach a sub-note whose inline link was never written (a create
-		// that succeeded while the follow-up note save failed), so it must never
-		// be a separately-cached query that can go stale or missing.
 		out["subNotes"] = h.subNotesOf(ci.ID, userID)
 	}
 	if ci.ParentItemID != nil {
@@ -136,7 +132,6 @@ type moveReq struct {
 	BoardID uuid.UUID `json:"boardId" binding:"required"`
 }
 
-// PATCH /api/v1/items/:id/board — move an item to a different board owned by the user.
 func (h *Handler) MoveItem(c *gin.Context) {
 	userID := middleware.UserID(c)
 	itemID, err := uuid.Parse(c.Param("id"))
